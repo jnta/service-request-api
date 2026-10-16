@@ -141,7 +141,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 0 | Bootstrap, architecture, and environment | Complete |
-| 1–17 | Domain, persistence, authentication, request workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 1 | Pure solicitation domain and workflow | Complete |
+| 2–17 | Persistence, authentication, request workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 
