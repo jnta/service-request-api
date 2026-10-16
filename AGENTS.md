@@ -23,12 +23,24 @@ docker compose up --build               # full stack
 1. No dual writes: persist outbox events in the same transaction as domain changes. Never index into Elasticsearch inside that transaction.
 2. PostgreSQL is the source of truth; Elasticsearch is a rebuildable projection.
 3. Domain code must not depend on Spring, JPA, Jackson, or HTTP.
-4. Inject time. Do not call `Instant.now()` or `LocalDate.now()` outside `ClockConfiguration`.
+4. Inject `Clock` wherever domain behavior depends on time. Never read the system clock directly.
 5. Aggregates expose business operations (`submit`, `approve`), not public state setters.
 6. Derive `clientId` from the authenticated identity, never from the request body.
 7. Intersect search filters with analyst coverage; query parameters must never expand authorization.
 8. `shared` must not depend on other modules.
 9. Flyway owns the schema. Never edit an applied migration or change `ddl-auto`.
+
+## Module and domain structure
+
+- Organize top-level packages by business capability. Within a module, separate `domain`, `application`, and `adapter` responsibilities as they emerge; do not create empty layers in advance.
+- Keep a pure domain model. Application use cases orchestrate work and depend on ports; adapters handle HTTP, persistence, and external services.
+- Group domain code by cohesive concept rather than putting every type in one flat package. In the solicitation module, keep concepts such as address, basic data, confirmation, review, and workflow distinct.
+- The aggregate root coordinates its invariants and state transitions. Value objects own and normalize the invariants of the value they represent.
+- Put cross-field business rules with the domain concept that owns those fields. Keep request-shape validation at the HTTP boundary, but never rely on it as the only enforcement of a domain invariant.
+- Validate an operation before mutating the aggregate so a rejected update cannot leave partial state behind.
+- Prefer deriving values such as workflow progress or terminal status from authoritative state over storing duplicate mutable state.
+- Use shared types only when concepts are genuinely shared across modules. `shared` is a small kernel, not a general-purpose model or utility bucket.
+- Add ports at external or module boundaries where substitution matters; do not introduce an interface for every class.
 
 ## Code and design
 

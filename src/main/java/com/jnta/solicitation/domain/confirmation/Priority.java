@@ -1,4 +1,4 @@
-package com.jnta.solicitation.domain;
+package com.jnta.solicitation.domain.confirmation;
 
 public enum Priority {
     LOW,

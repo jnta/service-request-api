@@ -1,4 +1,4 @@
-package com.jnta.solicitation.domain;
+package com.jnta.solicitation.domain.basicdata;
 
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
 import java.util.Locale;

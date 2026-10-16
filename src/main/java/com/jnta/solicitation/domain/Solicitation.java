@@ -1,10 +1,16 @@
 package com.jnta.solicitation.domain;
 
+import com.jnta.shared.identity.UserId;
+import com.jnta.solicitation.domain.address.Address;
+import com.jnta.solicitation.domain.basicdata.BasicData;
+import com.jnta.solicitation.domain.confirmation.Confirmation;
 import com.jnta.solicitation.domain.exception.IncompleteSolicitationException;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationStateException;
-import com.jnta.user.domain.UserId;
-import java.math.BigDecimal;
+import com.jnta.solicitation.domain.review.Decision;
+import com.jnta.solicitation.domain.validation.Violation;
+import com.jnta.solicitation.domain.workflow.SolicitationStatus;
+import com.jnta.solicitation.domain.workflow.SolicitationStep;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -12,22 +18,13 @@ import java.util.List;
 
 public class Solicitation {
 
-    private static final BigDecimal HIGH_PRIORITY_MINIMUM_VALUE = new BigDecimal("100");
-
     private final SolicitationId id;
     private final UserId owner;
-    private SolicitationStatus status;
-    private SolicitationStep currentStep;
-    private ServiceType serviceType;
-    private String title;
-    private String description;
+    private SolicitationStatus workflowStatus;
+    private BasicData basicData;
     private Address address;
-    private Priority priority;
-    private LocalDate preferredDate;
-    private BigDecimal estimatedValue;
-    private boolean termsAccepted;
+    private Confirmation confirmation;
     private Decision decision;
-    private String decisionComment;
 
     private Solicitation(SolicitationId id, UserId owner) {
         if (id == null || owner == null) {
@@ -35,84 +32,45 @@ public class Solicitation {
         }
         this.id = id;
         this.owner = owner;
-        this.status = SolicitationStatus.DRAFT;
-        this.currentStep = SolicitationStep.BASIC_DATA;
+        workflowStatus = SolicitationStatus.DRAFT;
     }
 
     public static Solicitation create(SolicitationId id, UserId owner) {
         return new Solicitation(id, owner);
     }
 
-    public void updateBasicData(ServiceType serviceType, String title, String description) {
+    public void updateBasicData(BasicData basicData) {
         ensureDraft();
-        if (serviceType == null) {
-            throw new InvalidSolicitationDataException("Service type is required");
+        if (basicData == null) {
+            throw new InvalidSolicitationDataException("Basic data is required");
         }
-        var normalizedTitle = required(title, "Title");
-        var normalizedDescription = required(description, "Description");
-        if (normalizedTitle.length() < 3 || normalizedTitle.length() > 80) {
-            throw new InvalidSolicitationDataException("Title must contain between 3 and 80 characters");
-        }
-        if (normalizedDescription.length() < 20 || normalizedDescription.length() > 1000) {
-            throw new InvalidSolicitationDataException("Description must contain between 20 and 1000 characters");
-        }
-
-        this.serviceType = serviceType;
-        this.title = normalizedTitle;
-        this.description = normalizedDescription;
-        if (currentStep == SolicitationStep.BASIC_DATA) {
-            currentStep = SolicitationStep.ADDRESS;
-        }
+        this.basicData = basicData;
     }
 
     public void updateAddress(Address address) {
         ensureDraft();
-        if (serviceType == null) {
+        if (basicData == null) {
             throw new InvalidSolicitationStateException("Basic data must be completed before the address");
         }
         if (address == null) {
             throw new InvalidSolicitationDataException("Address is required");
         }
-
         this.address = address;
-        if (currentStep == SolicitationStep.ADDRESS) {
-            currentStep = SolicitationStep.CONFIRMATION;
-        }
     }
 
-    public void updateConfirmation(
-            Priority priority,
-            LocalDate preferredDate,
-            BigDecimal estimatedValue,
-            boolean termsAccepted,
-            Clock clock) {
+    public void updateConfirmation(Confirmation confirmation, Clock clock) {
         ensureDraft();
         if (address == null) {
             throw new InvalidSolicitationStateException("Address must be completed before confirmation");
         }
-        if (priority == null) {
-            throw new InvalidSolicitationDataException("Priority is required");
-        }
-        if (preferredDate == null) {
-            throw new InvalidSolicitationDataException("Preferred date is required");
+        if (confirmation == null) {
+            throw new InvalidSolicitationDataException("Confirmation is required");
         }
         if (clock == null) {
             throw new InvalidSolicitationDataException("Clock is required");
         }
-        if (preferredDate.isBefore(LocalDate.now(clock))) {
-            throw new InvalidSolicitationDataException("Preferred date cannot be in the past");
-        }
-        if (estimatedValue == null || estimatedValue.signum() < 0) {
-            throw new InvalidSolicitationDataException("Estimated value must not be negative");
-        }
-        if (priority == Priority.HIGH && estimatedValue.compareTo(HIGH_PRIORITY_MINIMUM_VALUE) < 0) {
-            throw new InvalidSolicitationDataException("High priority requires an estimated value of at least 100");
-        }
-
-        this.priority = priority;
-        this.preferredDate = preferredDate;
-        this.estimatedValue = estimatedValue;
-        this.termsAccepted = termsAccepted;
+        ensurePreferredDateIsValid(confirmation, LocalDate.now(clock));
+        this.confirmation = confirmation;
     }
 
     public void submit(Clock clock) {
@@ -125,74 +83,20 @@ public class Solicitation {
         if (!violations.isEmpty()) {
             throw new IncompleteSolicitationException(violations);
         }
-        status = SolicitationStatus.SUBMITTED;
+        workflowStatus = SolicitationStatus.SUBMITTED;
     }
 
     public void startReview() {
         ensureStatus(SolicitationStatus.SUBMITTED, "Only submitted solicitations can start review");
-        status = SolicitationStatus.IN_REVIEW;
+        workflowStatus = SolicitationStatus.IN_REVIEW;
     }
 
     public void approve(String comment) {
-        decide(Decision.APPROVE, comment);
+        decide(Decision.Outcome.APPROVE, comment);
     }
 
     public void reject(String comment) {
-        decide(Decision.REJECT, comment);
-    }
-
-    private void decide(Decision decision, String comment) {
-        ensureStatus(SolicitationStatus.IN_REVIEW, "Only solicitations in review can be decided");
-        this.decision = decision;
-        this.decisionComment = comment;
-        this.status = decision == Decision.APPROVE ? SolicitationStatus.APPROVED : SolicitationStatus.REJECTED;
-    }
-
-    private List<String> submissionViolations(LocalDate today) {
-        var violations = new ArrayList<String>();
-        if (serviceType == null) {
-            violations.add("serviceType is required");
-        }
-        if (title == null || description == null) {
-            violations.add("basicData is required");
-        }
-        if (address == null) {
-            violations.add("address is required");
-        }
-        if (priority == null) {
-            violations.add("priority is required");
-        }
-        if (preferredDate == null) {
-            violations.add("preferredDate is required");
-        } else if (preferredDate.isBefore(today)) {
-            violations.add("preferredDate cannot be in the past");
-        }
-        if (estimatedValue == null) {
-            violations.add("estimatedValue is required");
-        } else if (priority == Priority.HIGH && estimatedValue.compareTo(HIGH_PRIORITY_MINIMUM_VALUE) < 0) {
-            violations.add("estimatedValue must be at least 100 for high priority");
-        }
-        if (!termsAccepted) {
-            violations.add("termsAccepted must be true");
-        }
-        return violations;
-    }
-
-    private void ensureDraft() {
-        ensureStatus(SolicitationStatus.DRAFT, "Only draft solicitations can be edited or submitted");
-    }
-
-    private void ensureStatus(SolicitationStatus expected, String message) {
-        if (status != expected) {
-            throw new InvalidSolicitationStateException(message);
-        }
-    }
-
-    private static String required(String value, String field) {
-        if (value == null || value.isBlank()) {
-            throw new InvalidSolicitationDataException(field + " is required");
-        }
-        return value.trim();
+        decide(Decision.Outcome.REJECT, comment);
     }
 
     public SolicitationId id() {
@@ -204,55 +108,88 @@ public class Solicitation {
     }
 
     public SolicitationStatus status() {
-        return status;
+        if (decision == null) {
+            return workflowStatus;
+        }
+        return decision.outcome() == Decision.Outcome.APPROVE
+                ? SolicitationStatus.APPROVED
+                : SolicitationStatus.REJECTED;
     }
 
     public SolicitationStep currentStep() {
-        return currentStep;
+        if (basicData == null) {
+            return SolicitationStep.BASIC_DATA;
+        }
+        if (address == null) {
+            return SolicitationStep.ADDRESS;
+        }
+        return SolicitationStep.CONFIRMATION;
     }
 
-    public ServiceType serviceType() {
-        return serviceType;
-    }
-
-    public String title() {
-        return title;
-    }
-
-    public String description() {
-        return description;
+    public BasicData basicData() {
+        return basicData;
     }
 
     public Address address() {
         return address;
     }
 
-    public Priority priority() {
-        return priority;
-    }
-
-    public LocalDate preferredDate() {
-        return preferredDate;
-    }
-
-    public BigDecimal estimatedValue() {
-        return estimatedValue;
-    }
-
-    public boolean termsAccepted() {
-        return termsAccepted;
+    public Confirmation confirmation() {
+        return confirmation;
     }
 
     public Decision decision() {
         return decision;
     }
 
-    public String decisionComment() {
-        return decisionComment;
+    public boolean hasCompletedSteps() {
+        return basicData != null && address != null && confirmation != null;
     }
 
-    public boolean isReadyForSubmission() {
-        return serviceType != null && title != null && description != null && address != null
-                && priority != null && preferredDate != null && estimatedValue != null;
+    public boolean isReadyForSubmission(Clock clock) {
+        if (status() != SolicitationStatus.DRAFT || !hasCompletedSteps()) {
+            return false;
+        }
+        if (clock == null) {
+            throw new InvalidSolicitationDataException("Clock is required");
+        }
+        return submissionViolations(LocalDate.now(clock)).isEmpty();
+    }
+
+    private void decide(Decision.Outcome outcome, String comment) {
+        ensureStatus(SolicitationStatus.IN_REVIEW, "Only solicitations in review can be decided");
+        decision = new Decision(outcome, comment);
+    }
+
+    private List<Violation> submissionViolations(LocalDate today) {
+        var violations = new ArrayList<Violation>();
+        if (basicData == null) {
+            violations.add(new Violation("basicData", "Basic data is required"));
+        }
+        if (address == null) {
+            violations.add(new Violation("address", "Address is required"));
+        }
+        if (confirmation == null) {
+            violations.add(new Violation("confirmation", "Confirmation is required"));
+        } else {
+            violations.addAll(confirmation.submissionViolations(today));
+        }
+        return List.copyOf(violations);
+    }
+
+    private void ensurePreferredDateIsValid(Confirmation confirmation, LocalDate today) {
+        if (confirmation.preferredDate().isBefore(today)) {
+            throw new InvalidSolicitationDataException("Preferred date cannot be in the past");
+        }
+    }
+
+    private void ensureDraft() {
+        ensureStatus(SolicitationStatus.DRAFT, "Only draft solicitations can be edited or submitted");
+    }
+
+    private void ensureStatus(SolicitationStatus expected, String message) {
+        if (status() != expected) {
+            throw new InvalidSolicitationStateException(message);
+        }
     }
 }

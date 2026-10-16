@@ -3,10 +3,21 @@ package com.jnta.solicitation.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.jnta.shared.identity.UserId;
+import com.jnta.solicitation.domain.address.Address;
+import com.jnta.solicitation.domain.address.Cep;
+import com.jnta.solicitation.domain.address.State;
+import com.jnta.solicitation.domain.basicdata.BasicData;
+import com.jnta.solicitation.domain.basicdata.ServiceType;
+import com.jnta.solicitation.domain.confirmation.Confirmation;
+import com.jnta.solicitation.domain.confirmation.Priority;
 import com.jnta.solicitation.domain.exception.IncompleteSolicitationException;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationStateException;
-import com.jnta.user.domain.UserId;
+import com.jnta.solicitation.domain.review.Decision;
+import com.jnta.solicitation.domain.validation.Violation;
+import com.jnta.solicitation.domain.workflow.SolicitationStatus;
+import com.jnta.solicitation.domain.workflow.SolicitationStep;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -32,61 +43,22 @@ class SolicitationTest {
     }
 
     @Nested
-    @DisplayName("Completing basic data")
-    class CompletingBasicData {
+    @DisplayName("Completing solicitation steps")
+    class CompletingSteps {
 
         @Test
-        @DisplayName("given a solicitation in DRAFT, when valid basic data is provided, then the current step becomes ADDRESS")
-        void shouldAdvanceToAddressWhenBasicDataIsValid() {
+        @DisplayName("given a draft, when basic data is provided, then the current step becomes ADDRESS")
+        void shouldAdvanceToAddressWhenBasicDataIsProvided() {
             var solicitation = newSolicitation();
 
-            solicitation.updateBasicData(serviceType(), "Equipment installation", "Install equipment at the main office.");
+            solicitation.updateBasicData(basicData());
 
             assertThat(solicitation.currentStep()).isEqualTo(SolicitationStep.ADDRESS);
-            assertThat(solicitation.title()).isEqualTo("Equipment installation");
+            assertThat(solicitation.basicData()).isEqualTo(basicData());
         }
 
         @Test
-        @DisplayName("given a solicitation in DRAFT, when the title is shorter than 3 characters, then basic data is rejected and the step remains BASIC_DATA")
-        void shouldRejectTitleShorterThanMinimumWithoutChangingStep() {
-            var solicitation = newSolicitation();
-
-            assertThatThrownBy(() -> solicitation.updateBasicData(serviceType(), "AB", "Install equipment at the main office."))
-                    .isInstanceOf(InvalidSolicitationDataException.class);
-
-            assertThat(solicitation.currentStep()).isEqualTo(SolicitationStep.BASIC_DATA);
-            assertThat(solicitation.title()).isNull();
-        }
-
-        @Test
-        @DisplayName("given a solicitation in DRAFT, when the description is shorter than 20 characters, then basic data is rejected")
-        void shouldRejectDescriptionShorterThanMinimum() {
-            var solicitation = newSolicitation();
-
-            assertThatThrownBy(() -> solicitation.updateBasicData(serviceType(), "Valid title", "Too short"))
-                    .isInstanceOf(InvalidSolicitationDataException.class);
-
-            assertThat(solicitation.currentStep()).isEqualTo(SolicitationStep.BASIC_DATA);
-        }
-    }
-
-    @Nested
-    @DisplayName("Completing address")
-    class CompletingAddress {
-
-        @Test
-        @DisplayName("given completed basic data, when a valid address is provided, then the current step becomes CONFIRMATION")
-        void shouldAdvanceToConfirmationWhenAddressIsValid() {
-            var solicitation = solicitationWithBasicData();
-
-            solicitation.updateAddress(address());
-
-            assertThat(solicitation.currentStep()).isEqualTo(SolicitationStep.CONFIRMATION);
-            assertThat(solicitation.address().cep().value()).isEqualTo("70040902");
-        }
-
-        @Test
-        @DisplayName("given a solicitation at BASIC_DATA, when address data is provided, then the operation is rejected")
+        @DisplayName("given a draft at BASIC_DATA, when address is provided, then the operation is rejected")
         void shouldRejectAddressBeforeBasicData() {
             var solicitation = newSolicitation();
 
@@ -98,91 +70,54 @@ class SolicitationTest {
         }
 
         @Test
-        @DisplayName("given an invalid CEP, when an address is created, then the address is rejected")
-        void shouldRejectInvalidCep() {
-            assertThatThrownBy(() -> new Cep("70040-9021"))
-                    .isInstanceOf(InvalidSolicitationDataException.class);
+        @DisplayName("given completed basic data, when an address is provided, then the current step becomes CONFIRMATION")
+        void shouldAdvanceToConfirmationWhenAddressIsProvided() {
+            var solicitation = solicitationWithBasicData();
+
+            solicitation.updateAddress(address());
+
+            assertThat(solicitation.currentStep()).isEqualTo(SolicitationStep.CONFIRMATION);
+            assertThat(solicitation.address()).isEqualTo(address());
         }
 
         @Test
-        @DisplayName("given an address number longer than 20 characters, when an address is created, then the address is rejected")
-        void shouldRejectAddressNumberLongerThanMaximum() {
-            assertThatThrownBy(() -> new Address(
-                            new Cep("70040902"),
-                            "Main Street",
-                            "Central",
-                            "Brasilia",
-                            State.DF,
-                            "123456789012345678901",
-                            null))
-                    .isInstanceOf(InvalidSolicitationDataException.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("Completing confirmation")
-    class CompletingConfirmation {
-
-        @Test
-        @DisplayName("given a solicitation whose address is complete, when valid confirmation data is provided, then it is ready for submission")
-        void shouldBeReadyForSubmissionWhenConfirmationIsValid() {
+        @DisplayName("given a draft with an address, when confirmation data is provided, then all steps are complete")
+        void shouldCompleteAllStepsWhenConfirmationIsProvided() {
             var solicitation = solicitationWithAddress();
+            var confirmation = confirmation(Priority.MEDIUM, "99.99", true, TODAY);
 
-            solicitation.updateConfirmation(Priority.MEDIUM, TODAY, new BigDecimal("99.99"), true, CLOCK);
+            solicitation.updateConfirmation(confirmation, CLOCK);
 
-            assertThat(solicitation.isReadyForSubmission()).isTrue();
-            assertThat(solicitation.termsAccepted()).isTrue();
+            assertThat(solicitation.hasCompletedSteps()).isTrue();
+            assertThat(solicitation.isReadyForSubmission(CLOCK)).isTrue();
+            assertThat(solicitation.confirmation()).isEqualTo(confirmation);
+            assertThat(solicitation.currentStep()).isEqualTo(SolicitationStep.CONFIRMATION);
         }
 
         @Test
-        @DisplayName("given a preferred date in the past, when confirmation data is provided, then confirmation is rejected")
-        void shouldRejectPreferredDateInThePast() {
+        @DisplayName("given a draft, when basic data is replaced after completing later steps, then completed steps remain complete")
+        void shouldDeriveCurrentStepFromCompletedData() {
             var solicitation = solicitationWithAddress();
+            solicitation.updateConfirmation(confirmation(Priority.LOW, "0", true, TODAY), CLOCK);
 
-            assertThatThrownBy(() -> solicitation.updateConfirmation(
-                            Priority.MEDIUM, TODAY.minusDays(1), new BigDecimal("100"), true, CLOCK))
-                    .isInstanceOf(InvalidSolicitationDataException.class);
+            solicitation.updateBasicData(new BasicData(serviceType(), "Updated title", "Updated description for the request."));
 
-            assertThat(solicitation.priority()).isNull();
+            assertThat(solicitation.currentStep()).isEqualTo(SolicitationStep.CONFIRMATION);
+            assertThat(solicitation.address()).isNotNull();
+            assertThat(solicitation.confirmation()).isNotNull();
         }
 
         @Test
-        @DisplayName("given HIGH priority and an estimated value below 100, when confirmation data is provided, then confirmation is rejected")
-        void shouldRejectLowEstimatedValueForHighPriority() {
+        @DisplayName("given a preferred date in the past, when confirmation is updated, then the draft remains unchanged")
+        void shouldRejectPastPreferredDateWithoutChangingConfirmation() {
             var solicitation = solicitationWithAddress();
+            var pastConfirmation = confirmation(Priority.LOW, "0", true, TODAY.minusDays(1));
 
-            assertThatThrownBy(() -> solicitation.updateConfirmation(
-                            Priority.HIGH, TODAY, new BigDecimal("99.99"), true, CLOCK))
+            assertThatThrownBy(() -> solicitation.updateConfirmation(pastConfirmation, CLOCK))
                     .isInstanceOf(InvalidSolicitationDataException.class);
 
-            assertThat(solicitation.priority()).isNull();
-        }
-
-        @Test
-        @DisplayName("given valid confirmation data and terms not accepted, when confirmation is saved, then the draft remains ready but cannot be submitted")
-        void shouldAllowUnacceptedTermsOnDraftButRejectSubmission() {
-            var solicitation = solicitationWithAddress();
-            solicitation.updateConfirmation(Priority.LOW, TODAY, BigDecimal.ZERO, false, CLOCK);
-
-            assertThat(solicitation.isReadyForSubmission()).isTrue();
-            assertThatThrownBy(() -> solicitation.submit(CLOCK))
-                    .isInstanceOf(IncompleteSolicitationException.class)
-                    .satisfies(exception -> assertThat(((IncompleteSolicitationException) exception).violations())
-                            .contains("termsAccepted must be true"));
-            assertThat(solicitation.status()).isEqualTo(SolicitationStatus.DRAFT);
-        }
-
-        @Test
-        @DisplayName("given a valid confirmation, when the preferred date has passed before submission, then submission is rejected")
-        void shouldRevalidatePreferredDateWhenSubmitting() {
-            var solicitation = solicitationWithAddress();
-            var initialClock = Clock.fixed(Instant.parse("2026-10-16T12:00:00Z"), ZoneOffset.UTC);
-            var laterClock = Clock.fixed(Instant.parse("2026-10-18T12:00:00Z"), ZoneOffset.UTC);
-            solicitation.updateConfirmation(Priority.LOW, TODAY.plusDays(1), BigDecimal.ZERO, true, initialClock);
-
-            assertThatThrownBy(() -> solicitation.submit(laterClock))
-                    .isInstanceOf(IncompleteSolicitationException.class);
-            assertThat(solicitation.status()).isEqualTo(SolicitationStatus.DRAFT);
+            assertThat(solicitation.confirmation()).isNull();
+            assertThat(solicitation.currentStep()).isEqualTo(SolicitationStep.CONFIRMATION);
         }
     }
 
@@ -201,26 +136,61 @@ class SolicitationTest {
         }
 
         @Test
-        @DisplayName("given a solicitation missing address information, when submitted, then submission fails and status remains DRAFT")
-        void shouldRejectIncompleteSubmission() {
-            var solicitation = solicitationWithBasicData();
+        @DisplayName("given an incomplete draft, when submitted, then every missing step is reported and status remains DRAFT")
+        void shouldReportAllMissingStepsWhenSubmissionIsIncomplete() {
+            var solicitation = newSolicitation();
 
             assertThatThrownBy(() -> solicitation.submit(CLOCK))
                     .isInstanceOf(IncompleteSolicitationException.class)
                     .satisfies(exception -> assertThat(((IncompleteSolicitationException) exception).violations())
-                            .contains("address is required"));
+                            .containsExactly(
+                                    new Violation("basicData", "Basic data is required"),
+                                    new Violation("address", "Address is required"),
+                                    new Violation("confirmation", "Confirmation is required")));
 
             assertThat(solicitation.status()).isEqualTo(SolicitationStatus.DRAFT);
         }
 
         @Test
-        @DisplayName("given a solicitation with status SUBMITTED, when basic data is updated, then the update is rejected")
+        @DisplayName("given a draft without accepted terms, when submitted, then submission is rejected")
+        void shouldRejectSubmissionWhenTermsAreNotAccepted() {
+            var solicitation = solicitationWithAddress();
+            solicitation.updateConfirmation(confirmation(Priority.LOW, "0", false, TODAY), CLOCK);
+
+            assertThat(solicitation.hasCompletedSteps()).isTrue();
+            assertThat(solicitation.isReadyForSubmission(CLOCK)).isFalse();
+
+            assertThatThrownBy(() -> solicitation.submit(CLOCK))
+                    .isInstanceOf(IncompleteSolicitationException.class)
+                    .satisfies(exception -> assertThat(((IncompleteSolicitationException) exception).violations())
+                            .contains(new Violation("termsAccepted", "Terms must be accepted")));
+
+            assertThat(solicitation.status()).isEqualTo(SolicitationStatus.DRAFT);
+        }
+
+        @Test
+        @DisplayName("given a preferred date that has passed, when submitted, then submission is rejected")
+        void shouldRevalidatePreferredDateAtSubmission() {
+            var solicitation = solicitationWithAddress();
+            var initialClock = Clock.fixed(Instant.parse("2026-10-16T12:00:00Z"), ZoneOffset.UTC);
+            var laterClock = Clock.fixed(Instant.parse("2026-10-18T12:00:00Z"), ZoneOffset.UTC);
+            solicitation.updateConfirmation(confirmation(Priority.LOW, "0", true, TODAY.plusDays(1)), initialClock);
+
+            assertThatThrownBy(() -> solicitation.submit(laterClock))
+                    .isInstanceOf(IncompleteSolicitationException.class)
+                    .satisfies(exception -> assertThat(((IncompleteSolicitationException) exception).violations())
+                            .contains(new Violation("preferredDate", "Preferred date cannot be in the past")));
+
+            assertThat(solicitation.status()).isEqualTo(SolicitationStatus.DRAFT);
+        }
+
+        @Test
+        @DisplayName("given a submitted solicitation, when basic data is updated, then the update is rejected")
         void shouldPreventModificationsAfterSubmission() {
             var solicitation = completeSolicitation();
             solicitation.submit(CLOCK);
 
-            assertThatThrownBy(() -> solicitation.updateBasicData(
-                            serviceType(), "Changed title", "Install equipment at the main office."))
+            assertThatThrownBy(() -> solicitation.updateBasicData(basicData()))
                     .isInstanceOf(InvalidSolicitationStateException.class);
         }
     }
@@ -230,10 +200,9 @@ class SolicitationTest {
     class ReviewingSolicitation {
 
         @Test
-        @DisplayName("given a solicitation with status SUBMITTED, when review starts, then status becomes IN_REVIEW")
+        @DisplayName("given a submitted solicitation, when review starts, then status becomes IN_REVIEW")
         void shouldStartReview() {
-            var solicitation = completeSolicitation();
-            solicitation.submit(CLOCK);
+            var solicitation = submittedSolicitation();
 
             solicitation.startReview();
 
@@ -241,30 +210,30 @@ class SolicitationTest {
         }
 
         @Test
-        @DisplayName("given a solicitation with status IN_REVIEW, when approved, then status becomes APPROVED")
+        @DisplayName("given a solicitation in review, when approved, then it stores the approval decision")
         void shouldApproveSolicitation() {
             var solicitation = solicitationInReview();
 
             solicitation.approve("Validated");
 
             assertThat(solicitation.status()).isEqualTo(SolicitationStatus.APPROVED);
-            assertThat(solicitation.decision()).isEqualTo(Decision.APPROVE);
-            assertThat(solicitation.decisionComment()).isEqualTo("Validated");
+            assertThat(solicitation.decision()).isEqualTo(new Decision(Decision.Outcome.APPROVE, "Validated"));
         }
 
         @Test
-        @DisplayName("given a solicitation with status IN_REVIEW, when rejected, then status becomes REJECTED")
+        @DisplayName("given a solicitation in review, when rejected, then it stores the rejection decision")
         void shouldRejectSolicitation() {
             var solicitation = solicitationInReview();
 
             solicitation.reject("Insufficient information");
 
             assertThat(solicitation.status()).isEqualTo(SolicitationStatus.REJECTED);
-            assertThat(solicitation.decision()).isEqualTo(Decision.REJECT);
+            assertThat(solicitation.decision())
+                    .isEqualTo(new Decision(Decision.Outcome.REJECT, "Insufficient information"));
         }
 
         @Test
-        @DisplayName("given a solicitation with status DRAFT, when approval is attempted, then the operation is rejected")
+        @DisplayName("given a draft, when approval is attempted, then the operation is rejected")
         void shouldPreventApprovalOfDraft() {
             var solicitation = newSolicitation();
 
@@ -272,10 +241,11 @@ class SolicitationTest {
                     .isInstanceOf(InvalidSolicitationStateException.class);
 
             assertThat(solicitation.status()).isEqualTo(SolicitationStatus.DRAFT);
+            assertThat(solicitation.decision()).isNull();
         }
 
         @Test
-        @DisplayName("given a solicitation with status DRAFT, when review is started, then the operation is rejected")
+        @DisplayName("given a draft, when review starts, then the operation is rejected")
         void shouldPreventStartingReviewOfDraft() {
             var solicitation = newSolicitation();
 
@@ -288,9 +258,13 @@ class SolicitationTest {
         return Solicitation.create(SolicitationId.generate(), new UserId(UUID.randomUUID()));
     }
 
+    private static BasicData basicData() {
+        return new BasicData(serviceType(), "Equipment installation", "Install equipment at the main office.");
+    }
+
     private static Solicitation solicitationWithBasicData() {
         var solicitation = newSolicitation();
-        solicitation.updateBasicData(serviceType(), "Equipment installation", "Install equipment at the main office.");
+        solicitation.updateBasicData(basicData());
         return solicitation;
     }
 
@@ -302,13 +276,18 @@ class SolicitationTest {
 
     private static Solicitation completeSolicitation() {
         var solicitation = solicitationWithAddress();
-        solicitation.updateConfirmation(Priority.HIGH, TODAY, new BigDecimal("100.00"), true, CLOCK);
+        solicitation.updateConfirmation(confirmation(Priority.HIGH, "100.00", true, TODAY), CLOCK);
+        return solicitation;
+    }
+
+    private static Solicitation submittedSolicitation() {
+        var solicitation = completeSolicitation();
+        solicitation.submit(CLOCK);
         return solicitation;
     }
 
     private static Solicitation solicitationInReview() {
-        var solicitation = completeSolicitation();
-        solicitation.submit(CLOCK);
+        var solicitation = submittedSolicitation();
         solicitation.startReview();
         return solicitation;
     }
@@ -319,5 +298,9 @@ class SolicitationTest {
 
     private static Address address() {
         return new Address(new Cep("70040-902"), "Main Street", "Central", "Brasilia", State.DF, "123", null);
+    }
+
+    private static Confirmation confirmation(Priority priority, String value, boolean termsAccepted, LocalDate date) {
+        return new Confirmation(priority, date, new BigDecimal(value), termsAccepted);
     }
 }

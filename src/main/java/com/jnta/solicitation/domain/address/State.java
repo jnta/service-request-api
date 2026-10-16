@@ -1,4 +1,4 @@
-package com.jnta.solicitation.domain;
+package com.jnta.solicitation.domain.address;
 
 public enum State {
     AC,

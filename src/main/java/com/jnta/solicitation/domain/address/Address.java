@@ -1,4 +1,4 @@
-package com.jnta.solicitation.domain;
+package com.jnta.solicitation.domain.address;
 
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
 
@@ -25,7 +25,7 @@ public record Address(
         if (number.length() > 20) {
             throw new InvalidSolicitationDataException("Address number must contain at most 20 characters");
         }
-        complement = complement == null || complement.isBlank() ? null : complement.trim();
+        complement = optional(complement);
     }
 
     private static String required(String value, String field) {
@@ -33,5 +33,9 @@ public record Address(
             throw new InvalidSolicitationDataException(field + " is required");
         }
         return value.trim();
+    }
+
+    private static String optional(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

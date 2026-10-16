@@ -1,4 +1,4 @@
-package com.jnta.user.domain;
+package com.jnta.shared.identity;
 
 import java.util.UUID;
 
