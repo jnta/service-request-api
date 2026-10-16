@@ -1,6 +1,6 @@
-package com.jnta.solicitation.domain.address;
+package com.jnta.shared.geography;
 
-public enum State {
+public enum BrazilianState {
     AC,
     AL,
     AP,

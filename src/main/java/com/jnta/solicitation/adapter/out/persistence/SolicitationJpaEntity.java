@@ -1,10 +1,10 @@
 package com.jnta.solicitation.adapter.out.persistence;
 
-import com.jnta.solicitation.domain.address.State;
+import com.jnta.shared.geography.BrazilianState;
+import com.jnta.solicitation.domain.money.Currency;
 import com.jnta.solicitation.domain.confirmation.Priority;
 import com.jnta.solicitation.domain.review.Decision;
 import com.jnta.solicitation.domain.workflow.SolicitationStatus;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -51,7 +51,7 @@ public class SolicitationJpaEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 2)
-    State state;
+    BrazilianState state;
 
     @Column(name = "address_number", length = 20)
     String addressNumber;
@@ -66,8 +66,12 @@ public class SolicitationJpaEntity {
     @Column(name = "preferred_date")
     LocalDate preferredDate;
 
-    @Column(name = "estimated_value", columnDefinition = "numeric")
-    BigDecimal estimatedValue;
+    @Column(name = "estimated_value_minor_units")
+    Long estimatedValueMinorUnits;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estimated_value_currency", length = 3)
+    Currency estimatedValueCurrency;
 
     @Column(name = "terms_accepted", nullable = false)
     boolean termsAccepted;

@@ -92,7 +92,7 @@ The reasoning and trade-offs are documented in the [ADRs](docs/adr/):
 | postgres | `postgres:17-alpine` | 5432 |
 | elasticsearch | `docker.elastic.co/elasticsearch/elasticsearch:9.3.3` | 9200 |
 
-Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is created by `src/main/resources/db/migration/V1__create_initial_schema.sql`.
+Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is split across `V001__create_users.sql`, `V002__create_solicitations.sql`, and `V003__create_analyst_state_coverage.sql`. Existing local databases that applied the former bootstrap migration must be recreated before use (`docker compose down -v`). After this initial restructuring, applied or shared migrations are immutable.
 
 ## Domain and workflow
 
@@ -151,7 +151,7 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 
 - `termsAccepted = false` may be saved on a draft but prevents submission.
 - Analyst coverage is a set of state codes.
-- Money uses `BigDecimal`; calendar dates use `LocalDate`.
+- Money is represented as integer minor units plus an explicit currency (`BRL`); `BigDecimal` is reserved for boundary conversion. Calendar dates use `LocalDate`.
 - A modular monolith keeps deployment and operations simple while preserving boundaries for future extraction.
 - The local Elasticsearch container runs without security for simpler development; Testcontainers uses the secured image configuration.
 - Cucumber is intentionally omitted. Gherkin documents expected behavior, while JUnit executes the tests.

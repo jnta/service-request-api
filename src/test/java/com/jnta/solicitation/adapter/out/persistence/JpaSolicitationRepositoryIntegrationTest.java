@@ -12,14 +12,15 @@ import com.jnta.solicitation.domain.Solicitation;
 import com.jnta.solicitation.domain.SolicitationId;
 import com.jnta.solicitation.domain.address.Address;
 import com.jnta.solicitation.domain.address.Cep;
-import com.jnta.solicitation.domain.address.State;
+import com.jnta.shared.geography.BrazilianState;
 import com.jnta.solicitation.domain.basicdata.BasicData;
 import com.jnta.solicitation.domain.basicdata.ServiceType;
 import com.jnta.solicitation.domain.confirmation.Confirmation;
 import com.jnta.solicitation.domain.confirmation.Priority;
+import com.jnta.solicitation.domain.money.Currency;
+import com.jnta.solicitation.domain.money.Money;
 import com.jnta.solicitation.domain.workflow.SolicitationStatus;
 import com.jnta.solicitation.domain.workflow.SolicitationStep;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -183,10 +184,10 @@ class JpaSolicitationRepositoryIntegrationTest {
     }
 
     private static Address address() {
-        return new Address(new Cep("70040-902"), "Main Street", "Central", "Brasilia", State.DF, "123", null);
+        return new Address(new Cep("70040-902"), "Main Street", "Central", "Brasilia", BrazilianState.DF, "123", null);
     }
 
     private static Confirmation confirmation() {
-        return new Confirmation(Priority.HIGH, LocalDate.of(2026, 10, 16), new BigDecimal("100.00"), true);
+        return new Confirmation(Priority.HIGH, LocalDate.of(2026, 10, 16), new Money(10_000, Currency.BRL), true);
     }
 }

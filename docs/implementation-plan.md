@@ -180,7 +180,7 @@ SolicitationStep
 ServiceType
 Priority
 Address
-State
+BrazilianState
 Cep
 Decision
 ```
@@ -215,7 +215,7 @@ public class Solicitation {
     public void updateConfirmation(
         Priority priority,
         LocalDate preferredDate,
-        BigDecimal estimatedValue,
+        Money estimatedValue,
         boolean termsAccepted
     );
 
@@ -454,7 +454,8 @@ complement
 
 priority
 preferred_date
-estimated_value
+estimated_value_minor_units
+estimated_value_currency
 terms_accepted
 
 status
@@ -958,7 +959,10 @@ Request:
 {
   "priority": "HIGH",
   "preferredDate": "2026-11-20",
-  "estimatedValue": 350.00,
+  "estimatedValue": {
+    "amount": "350.00",
+    "currency": "BRL"
+  },
   "termsAccepted": true
 }
 ```

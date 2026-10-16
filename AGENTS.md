@@ -28,7 +28,7 @@ docker compose up --build               # full stack
 6. Derive `clientId` from the authenticated identity, never from the request body.
 7. Intersect search filters with analyst coverage; query parameters must never expand authorization.
 8. `shared` must not depend on other modules.
-9. Flyway owns the schema. Never edit an applied migration or change `ddl-auto`.
+9. Flyway is the only schema-evolution mechanism. Hibernate uses `ddl-auto: validate`; never use `update`, `create`, or `create-drop` outside isolated tests.
 
 ## Module and domain structure
 
@@ -48,14 +48,28 @@ docker compose up --build               # full stack
 
 - Avoid comments and do not write JavaDoc. Prefer clear names, small methods, and tests that express intent.
 - Keep code, BDD scenarios, README, and ADRs in English.
-- Use `BigDecimal` for money, `LocalDate` for calendar dates, and `Instant` for timestamps.
+- Use the domain `Money` value object with integer minor units and an explicit currency; convert to/from `BigDecimal` only at external boundaries. Use `LocalDate` for calendar dates and `Instant` for timestamps.
 - Represent business failures as domain exceptions and map them to HTTP in `GlobalExceptionHandler`.
-- Name migrations `V<n>__description.sql`.
+- Write SQL migrations under `src/main/resources/db/migration`; use padded versions and cohesive names such as `V004__add_solicitation_index.sql`.
+- The initial schema has been restructured into `V001`–`V003`; databases using the previous bootstrap migration must be recreated before use. From this migration set onward, never edit or rename a migration once it has been applied or shared; make corrections in a new migration.
+- Keep each migration cohesive. Use database constraints for structural integrity and domain code for business invariants; prefer `VARCHAR` over PostgreSQL native enums.
+- Add indexes for actual query patterns. Avoid seeds and environment-specific credentials in schema migrations.
+- Use expand-and-contract for destructive changes when backwards compatibility matters.
+- Test migrations against a fresh PostgreSQL database with Testcontainers; Hibernate must validate the migrated schema.
 - Apply Clean Code and Object Calisthenics principles when they improve clarity; do not follow rules mechanically.
 - Prefer single-responsibility objects, short methods, shallow indentation, and early returns when they simplify control flow.
 - Use domain types where they prevent invalid combinations or ambiguous primitives. Keep behavior with the object that owns the data; avoid long call chains.
 - Do not add artificial abstractions just to satisfy a rule. Readability and simplicity take precedence.
 - Use Lombok when it removes meaningful boilerplate. Prefer narrow annotations over `@Data`; avoid generated equality, constructors, or builders that weaken domain invariants or JPA entity behavior. Prefer records for immutable value objects.
+
+## Mapping strategy
+
+- Use MapStruct by default for mechanical mappings between application boundaries, such as request DTOs to commands, results to response DTOs, and simple nested value mappings.
+- Every mapper must declare `@Mapper(config = StrictMappingConfig.class)` from `shared.mapping`. Do not override its policies locally without a documented reason.
+- `StrictMappingConfig` requires Spring component model, constructor injection, `unmappedTargetPolicy = ERROR`, `unmappedSourcePolicy = WARN`, and `typeConversionPolicy = ERROR`.
+- MapStruct maps data; domain code defines valid state and behavior. Never use MapStruct to create, reconstitute, or mutate domain aggregates; do not use `@MappingTarget` with aggregates.
+- Keep aggregate reconstruction explicit through domain APIs such as `Solicitation.create(...)` and `Solicitation.reconstitute(...)`. Persistence mappers may use MapStruct for structural/value-object mapping, but must use explicit code for invariant validation or semantic reconstruction.
+- Prefer manual mapping when business state, meaningful nulls, conditional reconstruction, or domain factories are involved. Do not force MapStruct for consistency alone.
 
 ## Tests
 

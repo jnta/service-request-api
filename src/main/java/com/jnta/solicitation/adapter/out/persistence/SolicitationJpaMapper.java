@@ -9,6 +9,7 @@ import com.jnta.solicitation.domain.address.Cep;
 import com.jnta.solicitation.domain.basicdata.BasicData;
 import com.jnta.solicitation.domain.basicdata.ServiceType;
 import com.jnta.solicitation.domain.confirmation.Confirmation;
+import com.jnta.solicitation.domain.money.Money;
 import com.jnta.solicitation.domain.review.Decision;
 import java.util.UUID;
 
@@ -44,7 +45,8 @@ final class SolicitationJpaMapper {
         if (confirmation != null) {
             entity.priority = confirmation.priority();
             entity.preferredDate = confirmation.preferredDate();
-            entity.estimatedValue = confirmation.estimatedValue();
+            entity.estimatedValueMinorUnits = confirmation.estimatedValue().amountInMinorUnits();
+            entity.estimatedValueCurrency = confirmation.estimatedValue().currency();
             entity.termsAccepted = confirmation.termsAccepted();
         }
 
@@ -66,7 +68,8 @@ final class SolicitationJpaMapper {
                         entity.addressNumber, entity.complement);
         var confirmation = entity.priority == null
                 ? null
-                : new Confirmation(entity.priority, entity.preferredDate, entity.estimatedValue, entity.termsAccepted);
+                : new Confirmation(entity.priority, entity.preferredDate,
+                        new Money(entity.estimatedValueMinorUnits, entity.estimatedValueCurrency), entity.termsAccepted);
         var decision = entity.decision == null ? null : new Decision(entity.decision, entity.decisionComment);
         var solicitation = Solicitation.reconstitute(
                 new SolicitationId(entity.id),

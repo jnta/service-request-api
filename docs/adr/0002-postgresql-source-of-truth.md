@@ -13,6 +13,8 @@ PostgreSQL is the authoritative store for all business state. Flyway owns schema
 
 The version token travels in an application-layer `VersionedSolicitation` wrapper rather than in the domain aggregate. Workflow progress is derived from completed step data and is not stored as a second mutable `current_step` column.
 
+Solicitation money is stored as integer minor units plus a currency code (`BIGINT` and `VARCHAR(3)`). This keeps currency explicit and avoids decimal rounding in persistence. The current domain supports BRL.
+
 Applied migrations are immutable; corrections are made in a new migration.
 
 ## Consequences

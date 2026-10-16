@@ -7,6 +7,7 @@ plugins {
 group = "com.jnta"
 version = "0.0.1-SNAPSHOT"
 description = "Service Request API"
+val mapstructVersion = "1.6.3"
 
 java {
     toolchain {
@@ -32,6 +33,9 @@ dependencies {
 
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
 
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")

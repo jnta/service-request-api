@@ -1,5 +1,6 @@
 package com.jnta.solicitation.domain.address;
 
+import com.jnta.shared.geography.BrazilianState;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
 
 public record Address(
@@ -7,7 +8,7 @@ public record Address(
         String street,
         String neighborhood,
         String city,
-        State state,
+        BrazilianState state,
         String number,
         String complement) {
 

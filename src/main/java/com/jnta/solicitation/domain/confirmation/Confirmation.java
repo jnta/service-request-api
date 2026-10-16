@@ -2,7 +2,8 @@ package com.jnta.solicitation.domain.confirmation;
 
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
 import com.jnta.solicitation.domain.validation.Violation;
-import java.math.BigDecimal;
+import com.jnta.solicitation.domain.money.Currency;
+import com.jnta.solicitation.domain.money.Money;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,10 +11,10 @@ import java.util.List;
 public record Confirmation(
         Priority priority,
         LocalDate preferredDate,
-        BigDecimal estimatedValue,
+        Money estimatedValue,
         boolean termsAccepted) {
 
-    private static final BigDecimal HIGH_PRIORITY_MINIMUM_VALUE = new BigDecimal("100");
+    private static final Money HIGH_PRIORITY_MINIMUM_VALUE = new Money(10_000, Currency.BRL);
 
     public Confirmation {
         if (priority == null) {
@@ -22,10 +23,10 @@ public record Confirmation(
         if (preferredDate == null) {
             throw new InvalidSolicitationDataException("Preferred date is required");
         }
-        if (estimatedValue == null || estimatedValue.signum() < 0) {
-            throw new InvalidSolicitationDataException("Estimated value must not be negative");
+        if (estimatedValue == null) {
+            throw new InvalidSolicitationDataException("Estimated value is required");
         }
-        if (priority == Priority.HIGH && estimatedValue.compareTo(HIGH_PRIORITY_MINIMUM_VALUE) < 0) {
+        if (priority == Priority.HIGH && estimatedValue.isLessThan(HIGH_PRIORITY_MINIMUM_VALUE)) {
             throw new InvalidSolicitationDataException("High priority requires an estimated value of at least 100");
         }
     }

@@ -3,14 +3,16 @@ package com.jnta.solicitation.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.jnta.shared.geography.BrazilianState;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.domain.address.Address;
 import com.jnta.solicitation.domain.address.Cep;
-import com.jnta.solicitation.domain.address.State;
 import com.jnta.solicitation.domain.basicdata.BasicData;
 import com.jnta.solicitation.domain.basicdata.ServiceType;
 import com.jnta.solicitation.domain.confirmation.Confirmation;
 import com.jnta.solicitation.domain.confirmation.Priority;
+import com.jnta.solicitation.domain.money.Currency;
+import com.jnta.solicitation.domain.money.Money;
 import com.jnta.solicitation.domain.exception.IncompleteSolicitationException;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationStateException;
@@ -18,7 +20,6 @@ import com.jnta.solicitation.domain.review.Decision;
 import com.jnta.solicitation.domain.validation.Violation;
 import com.jnta.solicitation.domain.workflow.SolicitationStatus;
 import com.jnta.solicitation.domain.workflow.SolicitationStep;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -84,7 +85,7 @@ class SolicitationTest {
         @DisplayName("given a draft with an address, when confirmation data is provided, then all steps are complete")
         void shouldCompleteAllStepsWhenConfirmationIsProvided() {
             var solicitation = solicitationWithAddress();
-            var confirmation = confirmation(Priority.MEDIUM, "99.99", true, TODAY);
+            var confirmation = confirmation(Priority.MEDIUM, 9_999, true, TODAY);
 
             solicitation.updateConfirmation(confirmation, CLOCK);
 
@@ -98,7 +99,7 @@ class SolicitationTest {
         @DisplayName("given a draft, when basic data is replaced after completing later steps, then completed steps remain complete")
         void shouldDeriveCurrentStepFromCompletedData() {
             var solicitation = solicitationWithAddress();
-            solicitation.updateConfirmation(confirmation(Priority.LOW, "0", true, TODAY), CLOCK);
+            solicitation.updateConfirmation(confirmation(Priority.LOW, 0, true, TODAY), CLOCK);
 
             solicitation.updateBasicData(new BasicData(serviceType(), "Updated title", "Updated description for the request."));
 
@@ -111,7 +112,7 @@ class SolicitationTest {
         @DisplayName("given a preferred date in the past, when confirmation is updated, then the draft remains unchanged")
         void shouldRejectPastPreferredDateWithoutChangingConfirmation() {
             var solicitation = solicitationWithAddress();
-            var pastConfirmation = confirmation(Priority.LOW, "0", true, TODAY.minusDays(1));
+            var pastConfirmation = confirmation(Priority.LOW, 0, true, TODAY.minusDays(1));
 
             assertThatThrownBy(() -> solicitation.updateConfirmation(pastConfirmation, CLOCK))
                     .isInstanceOf(InvalidSolicitationDataException.class);
@@ -155,7 +156,7 @@ class SolicitationTest {
         @DisplayName("given a draft without accepted terms, when submitted, then submission is rejected")
         void shouldRejectSubmissionWhenTermsAreNotAccepted() {
             var solicitation = solicitationWithAddress();
-            solicitation.updateConfirmation(confirmation(Priority.LOW, "0", false, TODAY), CLOCK);
+            solicitation.updateConfirmation(confirmation(Priority.LOW, 0, false, TODAY), CLOCK);
 
             assertThat(solicitation.hasCompletedSteps()).isTrue();
             assertThat(solicitation.isReadyForSubmission(CLOCK)).isFalse();
@@ -174,7 +175,7 @@ class SolicitationTest {
             var solicitation = solicitationWithAddress();
             var initialClock = Clock.fixed(Instant.parse("2026-10-16T12:00:00Z"), ZoneOffset.UTC);
             var laterClock = Clock.fixed(Instant.parse("2026-10-18T12:00:00Z"), ZoneOffset.UTC);
-            solicitation.updateConfirmation(confirmation(Priority.LOW, "0", true, TODAY.plusDays(1)), initialClock);
+            solicitation.updateConfirmation(confirmation(Priority.LOW, 0, true, TODAY.plusDays(1)), initialClock);
 
             assertThatThrownBy(() -> solicitation.submit(laterClock))
                     .isInstanceOf(IncompleteSolicitationException.class)
@@ -276,7 +277,7 @@ class SolicitationTest {
 
     private static Solicitation completeSolicitation() {
         var solicitation = solicitationWithAddress();
-        solicitation.updateConfirmation(confirmation(Priority.HIGH, "100.00", true, TODAY), CLOCK);
+        solicitation.updateConfirmation(confirmation(Priority.HIGH, 10_000, true, TODAY), CLOCK);
         return solicitation;
     }
 
@@ -297,10 +298,11 @@ class SolicitationTest {
     }
 
     private static Address address() {
-        return new Address(new Cep("70040-902"), "Main Street", "Central", "Brasilia", State.DF, "123", null);
+        return new Address(new Cep("70040-902"), "Main Street", "Central", "Brasilia", BrazilianState.DF, "123", null);
     }
 
-    private static Confirmation confirmation(Priority priority, String value, boolean termsAccepted, LocalDate date) {
-        return new Confirmation(priority, date, new BigDecimal(value), termsAccepted);
+    private static Confirmation confirmation(
+            Priority priority, long valueInMinorUnits, boolean termsAccepted, LocalDate date) {
+        return new Confirmation(priority, date, new Money(valueInMinorUnits, Currency.BRL), termsAccepted);
     }
 }
