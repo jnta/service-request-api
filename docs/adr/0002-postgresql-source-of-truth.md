@@ -11,6 +11,8 @@ Solicitations, users, analyst coverage, outbox events, and audit records require
 
 PostgreSQL is the authoritative store for all business state. Flyway owns schema changes; Hibernate validates mappings and does not modify the schema. Persistence adapters map between the framework-independent domain model and JPA entities. Optimistic locking uses `@Version` where concurrent updates must be detected.
 
+The version token travels in an application-layer `VersionedSolicitation` wrapper rather than in the domain aggregate. Workflow progress is derived from completed step data and is not stored as a second mutable `current_step` column.
+
 Applied migrations are immutable; corrections are made in a new migration.
 
 ## Consequences

@@ -32,4 +32,6 @@ Testcontainers (PostgreSQL + Elasticsearch), WireMock (ViaCEP) and REST Assured/
 | File | Phase | Contents |
 | ---- | ----- | -------- |
 | `application-bootstrap.feature` | 0 | Bootstrap and health check |
+| `solicitation-domain.feature` | 1 | Solicitation invariants and workflow |
+| `solicitation-persistence.feature` | 2 | PostgreSQL round-trip and optimistic locking |
 | `solicitation-domain.feature` | 1 | Solicitation data, validation, and workflow |

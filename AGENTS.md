@@ -41,6 +41,8 @@ docker compose up --build               # full stack
 - Prefer deriving values such as workflow progress or terminal status from authoritative state over storing duplicate mutable state.
 - Use shared types only when concepts are genuinely shared across modules. `shared` is a small kernel, not a general-purpose model or utility bucket.
 - Add ports at external or module boundaries where substitution matters; do not introduce an interface for every class.
+- Keep JPA entities, Spring Data repositories, and their mapper inside `adapter/out/persistence`; expose persistence through an application port.
+- Keep optimistic-lock version tokens in the application persistence wrapper, not in the domain aggregate.
 
 ## Code and design
 
@@ -53,6 +55,7 @@ docker compose up --build               # full stack
 - Prefer single-responsibility objects, short methods, shallow indentation, and early returns when they simplify control flow.
 - Use domain types where they prevent invalid combinations or ambiguous primitives. Keep behavior with the object that owns the data; avoid long call chains.
 - Do not add artificial abstractions just to satisfy a rule. Readability and simplicity take precedence.
+- Use Lombok when it removes meaningful boilerplate. Prefer narrow annotations over `@Data`; avoid generated equality, constructors, or builders that weaken domain invariants or JPA entity behavior. Prefer records for immutable value objects.
 
 ## Tests
 

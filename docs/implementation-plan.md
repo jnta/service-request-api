@@ -1,4 +1,4 @@
-Fase 0 — Bootstrap, arquitetura base e ambiente
+Fase 0 — Bootstrap, arquitetura base e ambiente — COMPLETED
 
 ## Objetivo
 
@@ -158,7 +158,7 @@ retorna healthy.
 
 ---
 
-# Fase 1 — Domínio puro da Solicitação
+# Fase 1 — Domínio puro da Solicitação — COMPLETED
 
 Essa é uma das fases mais importantes.
 
@@ -417,7 +417,7 @@ Essa é uma ótima regra arquitetural.
 
 ---
 
-# Fase 2 — Persistência PostgreSQL
+# Fase 2 — Persistência PostgreSQL — COMPLETED
 
 ## Objetivo
 

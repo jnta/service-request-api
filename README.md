@@ -92,11 +92,13 @@ The reasoning and trade-offs are documented in the [ADRs](docs/adr/):
 | postgres | `postgres:17-alpine` | 5432 |
 | elasticsearch | `docker.elastic.co/elasticsearch/elasticsearch:9.3.3` | 9200 |
 
-Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. Migrations will be added with the first real application schema in the persistence phase.
+Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is created by `src/main/resources/db/migration/V1__create_initial_schema.sql`.
 
 ## Domain and workflow
 
 A new solicitation starts with `status = DRAFT` and `currentStep = BASIC_DATA`.
+
+`currentStep` is derived from the completed step data rather than stored as a second mutable state. The persistence adapter carries the JPA version separately from the domain aggregate.
 
 ```text
 BASIC_DATA -> ADDRESS -> CONFIRMATION -> ready to submit
@@ -142,7 +144,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | --- | --- | --- |
 | 0 | Bootstrap, architecture, and environment | Complete |
 | 1 | Pure solicitation domain and workflow | Complete |
-| 2–17 | Persistence, authentication, request workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 2 | PostgreSQL persistence and optimistic locking | Complete |
+| 3–17 | Authentication, request API, ViaCEP, analyst workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 

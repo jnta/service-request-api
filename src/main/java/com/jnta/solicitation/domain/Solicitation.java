@@ -15,15 +15,24 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
+@Accessors(fluent = true)
 public class Solicitation {
 
+    @Getter
     private final SolicitationId id;
+    @Getter
     private final UserId owner;
     private SolicitationStatus workflowStatus;
+    @Getter
     private BasicData basicData;
+    @Getter
     private Address address;
+    @Getter
     private Confirmation confirmation;
+    @Getter
     private Decision decision;
 
     private Solicitation(SolicitationId id, UserId owner) {
@@ -37,6 +46,41 @@ public class Solicitation {
 
     public static Solicitation create(SolicitationId id, UserId owner) {
         return new Solicitation(id, owner);
+    }
+
+    public static Solicitation reconstitute(
+            SolicitationId id,
+            UserId owner,
+            SolicitationStatus status,
+            BasicData basicData,
+            Address address,
+            Confirmation confirmation,
+            Decision decision) {
+        if (status == null) {
+            throw new InvalidSolicitationDataException("Solicitation status is required");
+        }
+
+        var solicitation = new Solicitation(id, owner);
+        solicitation.basicData = basicData;
+        solicitation.address = address;
+        solicitation.confirmation = confirmation;
+
+        if (status == SolicitationStatus.APPROVED || status == SolicitationStatus.REJECTED) {
+            solicitation.restoreDecision(status, decision);
+        } else {
+            if (decision != null) {
+                throw new InvalidSolicitationDataException("A decision requires a terminal status");
+            }
+            solicitation.workflowStatus = status;
+        }
+
+        if (status != SolicitationStatus.DRAFT && !solicitation.hasCompletedSteps()) {
+            throw new InvalidSolicitationDataException("A submitted solicitation must have every step completed");
+        }
+        if (status != SolicitationStatus.DRAFT && !confirmation.termsAccepted()) {
+            throw new InvalidSolicitationDataException("A submitted solicitation must have accepted terms");
+        }
+        return solicitation;
     }
 
     public void updateBasicData(BasicData basicData) {
@@ -99,14 +143,6 @@ public class Solicitation {
         decide(Decision.Outcome.REJECT, comment);
     }
 
-    public SolicitationId id() {
-        return id;
-    }
-
-    public UserId owner() {
-        return owner;
-    }
-
     public SolicitationStatus status() {
         if (decision == null) {
             return workflowStatus;
@@ -126,22 +162,6 @@ public class Solicitation {
         return SolicitationStep.CONFIRMATION;
     }
 
-    public BasicData basicData() {
-        return basicData;
-    }
-
-    public Address address() {
-        return address;
-    }
-
-    public Confirmation confirmation() {
-        return confirmation;
-    }
-
-    public Decision decision() {
-        return decision;
-    }
-
     public boolean hasCompletedSteps() {
         return basicData != null && address != null && confirmation != null;
     }
@@ -159,6 +179,20 @@ public class Solicitation {
     private void decide(Decision.Outcome outcome, String comment) {
         ensureStatus(SolicitationStatus.IN_REVIEW, "Only solicitations in review can be decided");
         decision = new Decision(outcome, comment);
+    }
+
+    private void restoreDecision(SolicitationStatus status, Decision decision) {
+        if (decision == null) {
+            throw new InvalidSolicitationDataException("A terminal status requires a decision");
+        }
+        var expectedStatus = decision.outcome() == Decision.Outcome.APPROVE
+                ? SolicitationStatus.APPROVED
+                : SolicitationStatus.REJECTED;
+        if (status != expectedStatus) {
+            throw new InvalidSolicitationDataException("Decision does not match solicitation status");
+        }
+        workflowStatus = SolicitationStatus.IN_REVIEW;
+        this.decision = decision;
     }
 
     private List<Violation> submissionViolations(LocalDate today) {
