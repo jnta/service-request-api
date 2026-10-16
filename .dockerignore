@@ -1,0 +1,17 @@
+.git
+.gitignore
+.gradle
+.idea
+.vscode
+build
+out
+bin
+target
+*.iml
+*.ipr
+*.iws
+docs
+*.log
+logs
+.DS_Store
+.env

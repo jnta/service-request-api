@@ -1,0 +1,72 @@
+name: service-request-api
+
+services:
+  postgres:
+    # Keep this tag in sync with TestcontainersConfiguration#POSTGRES_IMAGE.
+    image: postgres:17-alpine
+    container_name: sra-postgres
+    environment:
+      POSTGRES_DB: solicitations
+      POSTGRES_USER: solicitations
+      POSTGRES_PASSWORD: solicitations
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U solicitations -d solicitations"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  elasticsearch:
+    # Keep this tag in sync with TestcontainersConfiguration#ELASTICSEARCH_IMAGE.
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
+    container_name: sra-elasticsearch
+    environment:
+      discovery.type: single-node
+      # TLS is left to the test environment; locally we want a plain HTTP endpoint.
+      xpack.security.enabled: "false"
+      xpack.security.enrollment.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s'"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sra-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/solicitations
+      DB_USERNAME: solicitations
+      DB_PASSWORD: solicitations
+      ELASTICSEARCH_URIS: http://elasticsearch:9200
+      SERVER_PORT: "8080"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 90s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  elasticsearch-data:
