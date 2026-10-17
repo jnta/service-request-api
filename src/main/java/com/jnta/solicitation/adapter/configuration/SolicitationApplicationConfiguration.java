@@ -1,7 +1,9 @@
 package com.jnta.solicitation.adapter.configuration;
 
 import com.jnta.solicitation.application.CreateSolicitationUseCase;
+import com.jnta.solicitation.application.DecideSolicitationUseCase;
 import com.jnta.solicitation.application.GetSolicitationUseCase;
+import com.jnta.solicitation.application.StartSolicitationReviewUseCase;
 import com.jnta.solicitation.application.SubmitSolicitationUseCase;
 import com.jnta.solicitation.application.UpdateAddressUseCase;
 import com.jnta.solicitation.application.UpdateBasicDataUseCase;
@@ -68,5 +70,21 @@ public class SolicitationApplicationConfiguration {
             SolicitationAccessPolicy accessPolicy,
             Clock clock) {
         return new SubmitSolicitationUseCase(repository, users, accessPolicy, clock);
+    }
+
+    @Bean
+    StartSolicitationReviewUseCase startSolicitationReviewUseCase(
+            SolicitationRepository repository,
+            UserRepository users,
+            SolicitationAccessPolicy accessPolicy) {
+        return new StartSolicitationReviewUseCase(repository, users, accessPolicy);
+    }
+
+    @Bean
+    DecideSolicitationUseCase decideSolicitationUseCase(
+            SolicitationRepository repository,
+            UserRepository users,
+            SolicitationAccessPolicy accessPolicy) {
+        return new DecideSolicitationUseCase(repository, users, accessPolicy);
     }
 }

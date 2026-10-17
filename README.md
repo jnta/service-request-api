@@ -123,6 +123,7 @@ Only drafts can be edited. Address details are resolved through ViaCEP from the 
 - `PUT /solicitations/{id}/steps/address` accepts CEP, number, and complement; street, neighborhood, city, and state are resolved by ViaCEP.
 - `PUT /solicitations/{id}/steps/confirmation` saves priority, preferred date, value and currency, and terms acceptance.
 - `POST /solicitations/{id}/submit` submits a complete solicitation with accepted terms.
+- `POST /analyst/solicitations/{id}/start` starts review; `POST /analyst/solicitations/{id}/decide` records an approval or rejection.
 
 ## Authentication and authorization
 
@@ -167,7 +168,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 7 | Confirmation step and BRL `Money` validation | Complete |
 | 8 | Complete solicitation submission | Complete |
 | 9 | Analyst geographic authorization | Complete |
-| 10–17 | Analyst review workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 10 | Analyst review workflow | Complete |
+| 11–17 | Search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 

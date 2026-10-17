@@ -267,6 +267,99 @@ class SolicitationApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("given a submitted solicitation in an analyst's coverage, when review starts, then status becomes IN_REVIEW")
+    void shouldStartReviewForCoveredAnalyst() throws Exception {
+        var solicitationId = createSubmittedSolicitation("review-start@example.com", "70040902", "DF");
+        String analystToken = createRoleUserAndLogin("reviewer-df@example.com", "ANALYST", Set.of("DF"));
+
+        mockMvc.perform(post("/analyst/solicitations/{id}/start", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("IN_REVIEW"));
+    }
+
+    @Test
+    @DisplayName("given a solicitation in review, when a covered analyst approves it, then status becomes APPROVED")
+    void shouldApproveSolicitationForCoveredAnalyst() throws Exception {
+        var solicitationId = createSubmittedSolicitation("approve-owner@example.com", "70040902", "DF");
+        String analystToken = createRoleUserAndLogin("approver-df@example.com", "ANALYST", Set.of("DF"));
+        startReview(solicitationId, analystToken);
+
+        mockMvc.perform(post("/analyst/solicitations/{id}/decide", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystToken))
+                        .contentType("application/json")
+                        .content(decisionRequest("APPROVE", "Validated")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.decision.comment").value("Validated"));
+    }
+
+    @Test
+    @DisplayName("given a solicitation in review, when a covered analyst rejects it with a comment, then status becomes REJECTED")
+    void shouldRejectSolicitationForCoveredAnalyst() throws Exception {
+        var solicitationId = createSubmittedSolicitation("reject-owner@example.com", "70040902", "DF");
+        String analystToken = createRoleUserAndLogin("rejecter-df@example.com", "ANALYST", Set.of("DF"));
+        startReview(solicitationId, analystToken);
+
+        mockMvc.perform(post("/analyst/solicitations/{id}/decide", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystToken))
+                        .contentType("application/json")
+                        .content(decisionRequest("REJECT", "Insufficient information")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"))
+                .andExpect(jsonPath("$.decision.comment").value("Insufficient information"));
+    }
+
+    @Test
+    @DisplayName("given a solicitation outside an analyst's coverage, when a decision is attempted, then access is denied")
+    void shouldDenyAnalystDecisionOutsideCoverage() throws Exception {
+        var solicitationId = createSubmittedSolicitation("outside-owner@example.com", "01001000", "SP");
+        String analystToken = createRoleUserAndLogin("outside-analyst@example.com", "ANALYST", Set.of("DF"));
+
+        mockMvc.perform(post("/analyst/solicitations/{id}/decide", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystToken))
+                        .contentType("application/json")
+                        .content(decisionRequest("APPROVE", "Validated")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("given a DRAFT in an analyst's coverage, when review starts, then a business conflict is returned")
+    void shouldRejectStartingReviewOfDraft() throws Exception {
+        var owner = registerAndLogin("draft-review-owner@example.com");
+        var solicitationId = createSolicitation(owner.accessToken());
+        completeBasicData(solicitationId, owner.accessToken());
+        stubAddressForState("70040902", "DF");
+        completeAddressWithCep(solicitationId, owner.accessToken(), "70040902");
+        String analystToken = createRoleUserAndLogin("draft-reviewer@example.com", "ANALYST", Set.of("DF"));
+
+        mockMvc.perform(post("/analyst/solicitations/{id}/start", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystToken)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("given two analysts decide a solicitation in sequence, when the second submits a stale decision, then a conflict is returned")
+    void shouldRejectSecondAnalystDecision() throws Exception {
+        var solicitationId = createSubmittedSolicitation("concurrent-owner@example.com", "70040902", "DF");
+        String analystA = createRoleUserAndLogin("analyst-a@example.com", "ANALYST", Set.of("DF"));
+        String analystB = createRoleUserAndLogin("analyst-b@example.com", "ANALYST", Set.of("DF"));
+        startReview(solicitationId, analystA);
+
+        mockMvc.perform(post("/analyst/solicitations/{id}/decide", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystA))
+                        .contentType("application/json")
+                        .content(decisionRequest("APPROVE", "Validated")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/analyst/solicitations/{id}/decide", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystB))
+                        .contentType("application/json")
+                        .content(decisionRequest("REJECT", "Stale decision")))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     @DisplayName("given a solicitation at ADDRESS and ViaCEP data, when the owner submits a CEP and number, then the address is populated")
     void shouldCompleteAddressUsingViaCep() throws Exception {
         var client = registerAndLogin("address@example.com");
@@ -617,6 +710,35 @@ class SolicitationApiIntegrationTest {
                         .contentType("application/json")
                         .content(confirmationRequest("HIGH", "2100-01-01", "350.00", "BRL", termsAccepted)))
                 .andExpect(status().isOk());
+    }
+
+    private String createSubmittedSolicitation(String email, String cep, String state) throws Exception {
+        var owner = registerAndLogin(email);
+        var solicitationId = createSolicitation(owner.accessToken());
+        completeBasicData(solicitationId, owner.accessToken());
+        stubAddressForState(cep, state);
+        completeAddressWithCep(solicitationId, owner.accessToken(), cep);
+        mockMvc.perform(put("/solicitations/{id}/steps/confirmation", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner.accessToken()))
+                        .contentType("application/json")
+                        .content(confirmationRequest("HIGH", "2100-01-01", "350.00", "BRL", true)))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/solicitations/{id}/submit", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner.accessToken())))
+                .andExpect(status().isOk());
+        return solicitationId;
+    }
+
+    private void startReview(String solicitationId, String analystToken) throws Exception {
+        mockMvc.perform(post("/analyst/solicitations/{id}/start", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystToken)))
+                .andExpect(status().isOk());
+    }
+
+    private static String decisionRequest(String decision, String comment) {
+        return """
+                {"decision":"%s","comment":"%s"}
+                """.formatted(decision, comment);
     }
 
     private static String confirmationRequest(

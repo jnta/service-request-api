@@ -8,7 +8,10 @@ public record Decision(Outcome outcome, String comment) {
         if (outcome == null) {
             throw new InvalidSolicitationDataException("Decision outcome is required");
         }
-        comment = comment == null || comment.isBlank() ? null : comment.trim();
+        if (comment == null || comment.isBlank() || comment.trim().length() > 1000) {
+            throw new InvalidSolicitationDataException("Decision comment must contain between 1 and 1000 characters");
+        }
+        comment = comment.trim();
     }
 
     public enum Outcome {

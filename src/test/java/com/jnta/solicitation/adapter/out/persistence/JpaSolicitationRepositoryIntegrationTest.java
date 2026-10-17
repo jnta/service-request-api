@@ -152,6 +152,33 @@ class JpaSolicitationRepositoryIntegrationTest {
         assertThat(persisted.version()).isEqualTo(updated.version());
     }
 
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("given two analysts load one IN_REVIEW version, when one decides, then the stale decision conflicts")
+    void shouldRejectStaleConcurrentDecision() {
+        var owner = createClientInTransaction();
+        var solicitation = Solicitation.create(SolicitationId.generate(), owner);
+        solicitation.updateBasicData(basicData("Equipment installation"));
+        solicitation.updateAddress(address());
+        solicitation.updateConfirmation(confirmation(), CLOCK);
+        solicitation.submit(CLOCK);
+        solicitation.startReview();
+        inTransaction(() -> solicitationRepository.save(VersionedSolicitation.newEntry(solicitation)));
+
+        var analystAView = inTransaction(() -> solicitationRepository.findById(solicitation.id()).orElseThrow());
+        var analystBView = inTransaction(() -> solicitationRepository.findById(solicitation.id()).orElseThrow());
+        analystAView.solicitation().approve("Approved by analyst A");
+        analystBView.solicitation().reject("Rejected by analyst B");
+        inTransaction(() -> solicitationRepository.save(analystAView));
+
+        assertThatThrownBy(() -> inTransaction(() -> solicitationRepository.save(analystBView)))
+                .isInstanceOf(ConcurrentSolicitationModificationException.class);
+
+        var persisted = inTransaction(() -> solicitationRepository.findById(solicitation.id()).orElseThrow());
+        assertThat(persisted.solicitation().status()).isEqualTo(SolicitationStatus.APPROVED);
+        assertThat(persisted.solicitation().decision().comment()).isEqualTo("Approved by analyst A");
+    }
+
     private UserId createClient() {
         var id = new UserId(UUID.randomUUID());
         insertClient(id);
