@@ -2,6 +2,8 @@ package com.jnta.solicitation.adapter.in.web;
 
 import com.jnta.solicitation.application.exception.SolicitationAccessDeniedException;
 import com.jnta.solicitation.application.exception.ConcurrentSolicitationModificationException;
+import com.jnta.solicitation.application.exception.PostalCodeNotFoundException;
+import com.jnta.solicitation.application.exception.PostalCodeUnavailableException;
 import com.jnta.solicitation.application.exception.SolicitationNotFoundException;
 import com.jnta.solicitation.domain.exception.IncompleteSolicitationException;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
@@ -33,6 +35,16 @@ public class SolicitationExceptionHandler {
     @ExceptionHandler(IncompleteSolicitationException.class)
     ResponseEntity<ProblemDetail> handleIncomplete(IncompleteSolicitationException exception) {
         return problem(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
+    }
+
+    @ExceptionHandler(PostalCodeNotFoundException.class)
+    ResponseEntity<ProblemDetail> handlePostalCodeNotFound() {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Postal code was not found");
+    }
+
+    @ExceptionHandler(PostalCodeUnavailableException.class)
+    ResponseEntity<ProblemDetail> handlePostalCodeUnavailable() {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Postal code service is unavailable");
     }
 
     @ExceptionHandler(InvalidSolicitationDataException.class)

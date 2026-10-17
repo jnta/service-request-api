@@ -27,6 +27,9 @@ public record Address(
             throw new InvalidSolicitationDataException("Address number must contain at most 20 characters");
         }
         complement = optional(complement);
+        if (complement != null && complement.length() > 120) {
+            throw new InvalidSolicitationDataException("Address complement must contain at most 120 characters");
+        }
     }
 
     private static String required(String value, String field) {

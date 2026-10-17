@@ -853,7 +853,7 @@ Scenario: Rejecting modification after submission
 
 ---
 
-# Fase 6 — Step 2 + ViaCEP
+# Fase 6 — Step 2 + ViaCEP — COMPLETED
 
 ## Endpoint
 

@@ -120,6 +120,7 @@ Only drafts can be edited. Address details are resolved through ViaCEP from the 
 - `POST /solicitations` creates a draft owned by the authenticated client. The owner ID is taken from the JWT and is never accepted from the request.
 - `GET /solicitations/{id}` returns the authenticated client's own solicitation. Requests for another client's resource return `403`; unknown IDs return `404`.
 - `PUT /solicitations/{id}/steps/basic-data` updates service type, title, and description for the owner of a draft.
+- `PUT /solicitations/{id}/steps/address` accepts CEP, number, and complement; street, neighborhood, city, and state are resolved by ViaCEP.
 
 ## Authentication and authorization
 
@@ -160,7 +161,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 3 | Users, roles, BCrypt authentication, and JWT authorization | Complete |
 | 4 | Authenticated solicitation creation and retrieval | Complete |
 | 5 | Basic-data step | Complete |
-| 6–17 | ViaCEP, confirmation, submission, analyst workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 6 | Address step and ViaCEP integration | Complete |
+| 7–17 | Confirmation, submission, analyst workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 

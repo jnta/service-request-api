@@ -41,6 +41,10 @@ security:
     connection-timeout: 5s
     socket-timeout: 30s
 
+integration:
+  viacep:
+    base-url: ${VIACEP_BASE_URL:https://viacep.com.br/ws}
+
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful

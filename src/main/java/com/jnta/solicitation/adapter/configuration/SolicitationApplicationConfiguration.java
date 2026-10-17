@@ -2,7 +2,9 @@ package com.jnta.solicitation.adapter.configuration;
 
 import com.jnta.solicitation.application.CreateSolicitationUseCase;
 import com.jnta.solicitation.application.GetSolicitationUseCase;
+import com.jnta.solicitation.application.UpdateAddressUseCase;
 import com.jnta.solicitation.application.UpdateBasicDataUseCase;
+import com.jnta.solicitation.application.port.out.PostalCodeGateway;
 import com.jnta.solicitation.application.port.out.SolicitationRepository;
 import com.jnta.solicitation.application.policy.SolicitationAccessPolicy;
 import org.springframework.context.annotation.Bean;
@@ -33,5 +35,13 @@ public class SolicitationApplicationConfiguration {
             SolicitationRepository repository,
             SolicitationAccessPolicy accessPolicy) {
         return new UpdateBasicDataUseCase(repository, accessPolicy);
+    }
+
+    @Bean
+    UpdateAddressUseCase updateAddressUseCase(
+            SolicitationRepository repository,
+            SolicitationAccessPolicy accessPolicy,
+            PostalCodeGateway postalCodeGateway) {
+        return new UpdateAddressUseCase(repository, accessPolicy, postalCodeGateway);
     }
 }

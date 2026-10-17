@@ -44,6 +44,8 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.testcontainers:testcontainers-elasticsearch")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.wiremock:wiremock-standalone:3.13.2")
+    testImplementation("org.wiremock:wiremock-standalone:3.13.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

@@ -3,7 +3,9 @@ package com.jnta.solicitation.adapter.in.web;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.CreateSolicitationUseCase;
 import com.jnta.solicitation.application.GetSolicitationUseCase;
+import com.jnta.solicitation.application.UpdateAddressUseCase;
 import com.jnta.solicitation.application.UpdateBasicDataUseCase;
+import com.jnta.solicitation.application.command.UpdateAddressCommand;
 import com.jnta.solicitation.application.command.UpdateBasicDataCommand;
 import com.jnta.solicitation.domain.SolicitationId;
 import jakarta.validation.Valid;
@@ -29,8 +31,10 @@ public class SolicitationController {
 
     private final CreateSolicitationUseCase createSolicitation;
     private final GetSolicitationUseCase getSolicitation;
+    private final UpdateAddressUseCase updateAddress;
     private final UpdateBasicDataUseCase updateBasicData;
     private final SolicitationResponseMapper responseMapper;
+    private final AddressRequestMapper addressRequestMapper;
     private final BasicDataRequestMapper basicDataRequestMapper;
 
     @PostMapping
@@ -46,6 +50,16 @@ public class SolicitationController {
     @GetMapping("/{id}")
     public SolicitationResponse get(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         var solicitation = getSolicitation.get(new SolicitationId(id), requester(jwt));
+        return responseMapper.toResponse(solicitation);
+    }
+
+    @PutMapping("/{id}/steps/address")
+    public SolicitationResponse updateAddress(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateAddressRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UpdateAddressCommand command = addressRequestMapper.toCommand(request);
+        var solicitation = updateAddress.update(new SolicitationId(id), requester(jwt), command);
         return responseMapper.toResponse(solicitation);
     }
 

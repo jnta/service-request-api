@@ -92,14 +92,18 @@ public class Solicitation {
     }
 
     public void updateAddress(Address address) {
-        ensureDraft();
-        if (basicData == null) {
-            throw new InvalidSolicitationStateException("Basic data must be completed before the address");
-        }
+        ensureAddressCanBeUpdated();
         if (address == null) {
             throw new InvalidSolicitationDataException("Address is required");
         }
         this.address = address;
+    }
+
+    public void ensureAddressCanBeUpdated() {
+        ensureDraft();
+        if (basicData == null) {
+            throw new InvalidSolicitationStateException("Basic data must be completed before the address");
+        }
     }
 
     public void updateConfirmation(Confirmation confirmation, Clock clock) {
