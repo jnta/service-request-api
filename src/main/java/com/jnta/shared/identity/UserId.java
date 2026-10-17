@@ -9,4 +9,8 @@ public record UserId(UUID value) {
             throw new IllegalArgumentException("User id is required");
         }
     }
+
+    public static UserId generate() {
+        return new UserId(UUID.randomUUID());
+    }
 }

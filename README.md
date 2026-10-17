@@ -23,6 +23,8 @@ docker compose up --build
 
 Compose starts PostgreSQL, Elasticsearch, and the application. The application waits for both dependencies to become healthy. Flyway applies pending migrations at startup.
 
+Compose enables a local-only administrator bootstrap using `admin@example.com` and `local-admin-password-123`, and a local-only JWT signing key. Override `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`, and `JWT_SECRET_BASE64` for your own development environment. Never use the Compose defaults outside local development.
+
 Check application health:
 
 ```bash
@@ -46,6 +48,10 @@ The current user must be able to access Docker. If needed, add the user to the `
 
 ```bash
 docker compose up -d postgres elasticsearch
+export JWT_SECRET_BASE64="$(openssl rand -base64 32)"
+export BOOTSTRAP_ADMIN_ENABLED=true
+export BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+export BOOTSTRAP_ADMIN_PASSWORD='replace-with-a-local-password'
 mise exec -- ./gradlew bootRun
 ```
 
@@ -111,10 +117,10 @@ Only drafts can be edited. Address details are resolved through ViaCEP from the 
 
 ## Authentication and authorization
 
-- `POST /auth/register` creates a `CLIENT` account.
+- `POST /auth/register` creates only a `CLIENT` account.
 - `POST /auth/login` returns a JWT with the user ID and role.
 - `POST /admin/users` allows an `ADMIN` to create analysts or admins and assign analyst coverage.
-- Passwords are stored using BCrypt.
+- Passwords are stored using BCrypt. JWTs are signed with an environment-provided HS256 key.
 
 | Role | Access |
 | --- | --- |
@@ -122,7 +128,7 @@ Only drafts can be edited. Address details are resolved through ViaCEP from the 
 | `ANALYST` | Solicitations in covered states |
 | `ADMIN` | Unrestricted |
 
-During the bootstrap phase, health and API documentation endpoints are public; other routes require temporary HTTP Basic authentication. JWT authentication is introduced in a later phase.
+Health, API documentation, registration, and login endpoints are public. `POST /admin/users` requires the `ADMIN` role; other API routes require a valid JWT.
 
 ## Search and consistency
 
@@ -145,7 +151,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 0 | Bootstrap, architecture, and environment | Complete |
 | 1 | Pure solicitation domain and workflow | Complete |
 | 2 | PostgreSQL persistence and optimistic locking | Complete |
-| 3–17 | Authentication, request API, ViaCEP, analyst workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 3 | Users, roles, BCrypt authentication, and JWT authorization | Complete |
+| 4–17 | Solicitation API, ViaCEP, analyst workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 
@@ -158,7 +165,7 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 
 ## Production considerations
 
-- Replace temporary HTTP Basic authentication with JWT or an external OAuth2/OIDC provider.
+- Replace the current HS256 signing key with managed key rotation or an external OAuth2/OIDC provider.
 - Enable Elasticsearch TLS and authentication in the local Compose environment.
 - Add distributed locking or partitioning if the outbox processor runs across multiple replicas.
 - Export Actuator metrics to a monitoring platform and add distributed tracing.

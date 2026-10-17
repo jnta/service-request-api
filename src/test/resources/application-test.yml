@@ -1,0 +1,7 @@
+security:
+  jwt:
+    secret-base64: c2VydmljZS1yZXF1ZXN0LWFwaS10ZXN0cy1vbmx5LXNlY3JldC0zMi1ieXRlcy1taW5pbXVt
+    issuer: service-request-api-test
+    access-token-ttl: PT15M
+  bootstrap-admin:
+    enabled: false

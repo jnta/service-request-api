@@ -551,7 +551,7 @@ sem perder significado.
 
 ---
 
-# Fase 3 — Usuários, roles e autenticação JWT
+# Fase 3 — Usuários, roles e autenticação JWT — COMPLETED
 
 ## Objetivo
 
