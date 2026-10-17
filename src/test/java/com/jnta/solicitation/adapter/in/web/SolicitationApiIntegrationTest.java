@@ -299,6 +299,89 @@ class SolicitationApiIntegrationTest {
         VIA_CEP.verify(0, WireMock.getRequestedFor(WireMock.anyUrl()));
     }
 
+    @Test
+    @DisplayName("given a solicitation at CONFIRMATION, when valid confirmation is submitted, then it is persisted as BRL minor units")
+    void shouldPersistValidConfirmation() throws Exception {
+        var client = registerAndLogin("confirmation@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeBasicData(solicitationId, client.accessToken());
+        completeAddress(solicitationId, client.accessToken());
+
+        mockMvc.perform(put("/solicitations/{id}/steps/confirmation", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType("application/json")
+                        .content(confirmationRequest("HIGH", "2100-01-01", "350.00", "BRL", true)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmation.priority").value("HIGH"))
+                .andExpect(jsonPath("$.confirmation.estimatedValue.amount").value(350.00))
+                .andExpect(jsonPath("$.confirmation.estimatedValue.currency").value("BRL"))
+                .andExpect(jsonPath("$.confirmation.termsAccepted").value(true))
+                .andExpect(jsonPath("$.currentStep").value("CONFIRMATION"));
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmation.estimatedValue.amount").value(350.00));
+    }
+
+    @Test
+    @DisplayName("given a preferred date in the past, when confirmation is submitted, then no confirmation is persisted")
+    void shouldRejectPastPreferredDateWithoutMutatingDraft() throws Exception {
+        var client = registerAndLogin("past-date@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeBasicData(solicitationId, client.accessToken());
+        completeAddress(solicitationId, client.accessToken());
+
+        mockMvc.perform(put("/solicitations/{id}/steps/confirmation", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType("application/json")
+                        .content(confirmationRequest("LOW", "2020-01-01", "50.00", "BRL", true)))
+                .andExpect(status().isUnprocessableEntity());
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmation").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.currentStep").value("CONFIRMATION"));
+    }
+
+    @Test
+    @DisplayName("given HIGH priority and an amount below 100 BRL, when confirmation is submitted, then it is rejected")
+    void shouldRejectHighPriorityBelowMinimumValue() throws Exception {
+        var client = registerAndLogin("low-value@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeBasicData(solicitationId, client.accessToken());
+        completeAddress(solicitationId, client.accessToken());
+
+        mockMvc.perform(put("/solicitations/{id}/steps/confirmation", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType("application/json")
+                        .content(confirmationRequest("HIGH", "2100-01-01", "99.99", "BRL", true)))
+                .andExpect(status().isUnprocessableEntity());
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmation").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    @DisplayName("given valid confirmation data with unaccepted terms, when saved, then the draft remains incomplete for submission")
+    void shouldSaveConfirmationWithUnacceptedTerms() throws Exception {
+        var client = registerAndLogin("terms@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeBasicData(solicitationId, client.accessToken());
+        completeAddress(solicitationId, client.accessToken());
+
+        mockMvc.perform(put("/solicitations/{id}/steps/confirmation", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType("application/json")
+                        .content(confirmationRequest("LOW", "2100-01-01", "0.00", "BRL", false)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmation.termsAccepted").value(false))
+                .andExpect(jsonPath("$.status").value("DRAFT"));
+    }
+
     private TestIdentity registerAndLogin(String email) throws Exception {
         MvcResult registration = mockMvc.perform(post("/auth/register")
                         .contentType("application/json")
@@ -356,6 +439,24 @@ class SolicitationApiIntegrationTest {
                         .contentType("application/json")
                         .content(basicDataRequest("Equipment installation")))
                 .andExpect(status().isOk());
+    }
+
+    private void completeAddress(String solicitationId, String accessToken) throws Exception {
+        stubViaCep("70040902", 200, """
+                {"cep":"70040-902","logradouro":"Main Street","complemento":"","unidade":"","bairro":"Central","localidade":"Brasilia","uf":"DF","estado":"Distrito Federal","regiao":"Centro-Oeste","ibge":"5300108","gia":"","ddd":"61","siafi":"9701"}
+                """);
+        mockMvc.perform(put("/solicitations/{id}/steps/address", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                        .contentType("application/json")
+                        .content(addressRequest("70040902", "123", null)))
+                .andExpect(status().isOk());
+    }
+
+    private static String confirmationRequest(
+            String priority, String preferredDate, String amount, String currency, boolean termsAccepted) {
+        return """
+                {"priority":"%s","preferredDate":"%s","estimatedValue":{"amount":"%s","currency":"%s"},"termsAccepted":%s}
+                """.formatted(priority, preferredDate, amount, currency, termsAccepted);
     }
 
     private static String addressRequest(String cep, String number, String complement) {

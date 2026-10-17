@@ -4,9 +4,11 @@ import com.jnta.solicitation.application.CreateSolicitationUseCase;
 import com.jnta.solicitation.application.GetSolicitationUseCase;
 import com.jnta.solicitation.application.UpdateAddressUseCase;
 import com.jnta.solicitation.application.UpdateBasicDataUseCase;
+import com.jnta.solicitation.application.UpdateConfirmationUseCase;
 import com.jnta.solicitation.application.port.out.PostalCodeGateway;
 import com.jnta.solicitation.application.port.out.SolicitationRepository;
 import com.jnta.solicitation.application.policy.SolicitationAccessPolicy;
+import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -43,5 +45,13 @@ public class SolicitationApplicationConfiguration {
             SolicitationAccessPolicy accessPolicy,
             PostalCodeGateway postalCodeGateway) {
         return new UpdateAddressUseCase(repository, accessPolicy, postalCodeGateway);
+    }
+
+    @Bean
+    UpdateConfirmationUseCase updateConfirmationUseCase(
+            SolicitationRepository repository,
+            SolicitationAccessPolicy accessPolicy,
+            Clock clock) {
+        return new UpdateConfirmationUseCase(repository, accessPolicy, clock);
     }
 }

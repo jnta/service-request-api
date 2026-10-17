@@ -945,7 +945,7 @@ WireMock seria perfeito aqui.
 
 ---
 
-# Fase 7 — Step 3: Confirmação
+# Fase 7 — Step 3: Confirmação — COMPLETED
 
 ## Endpoint
 

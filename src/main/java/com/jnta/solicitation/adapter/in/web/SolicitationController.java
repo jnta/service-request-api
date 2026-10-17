@@ -5,7 +5,9 @@ import com.jnta.solicitation.application.CreateSolicitationUseCase;
 import com.jnta.solicitation.application.GetSolicitationUseCase;
 import com.jnta.solicitation.application.UpdateAddressUseCase;
 import com.jnta.solicitation.application.UpdateBasicDataUseCase;
+import com.jnta.solicitation.application.UpdateConfirmationUseCase;
 import com.jnta.solicitation.application.command.UpdateAddressCommand;
+import com.jnta.solicitation.application.command.UpdateConfirmationCommand;
 import com.jnta.solicitation.application.command.UpdateBasicDataCommand;
 import com.jnta.solicitation.domain.SolicitationId;
 import jakarta.validation.Valid;
@@ -33,9 +35,11 @@ public class SolicitationController {
     private final GetSolicitationUseCase getSolicitation;
     private final UpdateAddressUseCase updateAddress;
     private final UpdateBasicDataUseCase updateBasicData;
+    private final UpdateConfirmationUseCase updateConfirmation;
     private final SolicitationResponseMapper responseMapper;
     private final AddressRequestMapper addressRequestMapper;
     private final BasicDataRequestMapper basicDataRequestMapper;
+    private final ConfirmationRequestMapper confirmationRequestMapper;
 
     @PostMapping
     public ResponseEntity<SolicitationResponse> create(@AuthenticationPrincipal Jwt jwt) {
@@ -60,6 +64,16 @@ public class SolicitationController {
             @AuthenticationPrincipal Jwt jwt) {
         UpdateAddressCommand command = addressRequestMapper.toCommand(request);
         var solicitation = updateAddress.update(new SolicitationId(id), requester(jwt), command);
+        return responseMapper.toResponse(solicitation);
+    }
+
+    @PutMapping("/{id}/steps/confirmation")
+    public SolicitationResponse updateConfirmation(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateConfirmationRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UpdateConfirmationCommand command = confirmationRequestMapper.toCommand(request);
+        var solicitation = updateConfirmation.update(new SolicitationId(id), requester(jwt), command);
         return responseMapper.toResponse(solicitation);
     }
 
