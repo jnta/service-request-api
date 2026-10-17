@@ -1,0 +1,23 @@
+meta {
+  name: Cannot resubmit approved
+  type: http
+  seq: 19
+}
+
+post {
+  url: {{baseUrl}}/solicitations/{{approvedId}}/submit
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+tests {
+  test("HTTP 409", function () { expect(res.getStatus()).to.equal(409); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  test("Error code", function () { expect(data.code).to.equal("STATE_CONFLICT"); });
+  
+}

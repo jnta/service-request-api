@@ -1,0 +1,36 @@
+meta {
+  name: Register client
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Bruno client",
+    "email": "{{clientEmail}}",
+    "password": "{{password}}"
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (res.getStatus() === 201) {
+    bru.setVar("clientId", data.id);
+  }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  const data = res.getBody();
+  test("Response invariant", function () { expect(data.role).to.equal("CLIENT"); });
+}

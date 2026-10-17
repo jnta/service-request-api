@@ -1,0 +1,31 @@
+meta {
+  name: Resolve approved address
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{approvedId}}/steps/address
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "cep": "{{cep}}",
+    "number": "123",
+    "complement": "Bruno suite"
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("DRAFT"); expect(data.currentStep).to.equal("CONFIRMATION"); });
+  test("Resolved address", function () { expect(data.address.state).to.equal(bru.getEnvVar("expectedState")); expect(data.address.street).to.be.a("string").and.not.empty; });
+}

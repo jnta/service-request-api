@@ -1,0 +1,21 @@
+meta {
+  name: Declined terms draft unchanged
+  type: http
+  seq: 45
+}
+
+get {
+  url: {{baseUrl}}/solicitations/{{draftId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("DRAFT"); });test("Response invariant", function () { expect(data.confirmation.termsAccepted).to.equal(false); });
+}

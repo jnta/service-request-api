@@ -1,0 +1,34 @@
+meta {
+  name: High priority boundary accepted
+  type: http
+  seq: 46
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{draftId}}/steps/confirmation
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "priority": "HIGH",
+    "preferredDate": "{{futureDate}}",
+    "estimatedValue": {
+      "amount": "100.00",
+      "currency": "BRL"
+    },
+    "termsAccepted": true
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Response invariant", function () { expect(data.confirmation.priority).to.equal("HIGH"); });
+}

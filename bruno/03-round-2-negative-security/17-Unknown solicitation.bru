@@ -1,0 +1,23 @@
+meta {
+  name: Unknown solicitation
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/solicitations/00000000-0000-0000-0000-000000000000
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+tests {
+  test("HTTP 404", function () { expect(res.getStatus()).to.equal(404); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  test("Error code", function () { expect(data.code).to.equal("SOLICITATION_NOT_FOUND"); });
+  
+}

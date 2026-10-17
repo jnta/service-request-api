@@ -1,0 +1,21 @@
+meta {
+  name: Read approved terminal state
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/solicitations/{{approvedId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("APPROVED"); });
+}

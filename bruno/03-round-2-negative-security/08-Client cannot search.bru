@@ -1,0 +1,23 @@
+meta {
+  name: Client cannot search
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/analyst/solicitations/search
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+tests {
+  test("HTTP 403", function () { expect(res.getStatus()).to.equal(403); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  test("Error code", function () { expect(data.code).to.equal("ACCESS_DENIED"); });
+  
+}

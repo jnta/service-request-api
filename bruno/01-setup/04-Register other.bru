@@ -1,0 +1,36 @@
+meta {
+  name: Register other
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Bruno other",
+    "email": "{{otherEmail}}",
+    "password": "{{password}}"
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (res.getStatus() === 201) {
+    bru.setVar("otherId", data.id);
+  }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  const data = res.getBody();
+  test("Response invariant", function () { expect(data.role).to.equal("CLIENT"); });
+}

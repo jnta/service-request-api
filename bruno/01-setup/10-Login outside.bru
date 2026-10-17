@@ -1,0 +1,35 @@
+meta {
+  name: Login outside
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{outsideEmail}}",
+    "password": "{{password}}"
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (res.getStatus() === 200) {
+    bru.setVar("outsideToken", data.accessToken);
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  
+}

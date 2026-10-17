@@ -1,0 +1,34 @@
+meta {
+  name: Confirm rejected
+  type: http
+  seq: 15
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{rejectedId}}/steps/confirmation
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "priority": "LOW",
+    "preferredDate": "{{futureDate}}",
+    "estimatedValue": {
+      "amount": "350.00",
+      "currency": "BRL"
+    },
+    "termsAccepted": true
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Confirmation persisted", function () { expect(data.confirmation.termsAccepted).to.equal(true); expect(Number(data.confirmation.estimatedValue.amount)).to.equal(350); });
+}

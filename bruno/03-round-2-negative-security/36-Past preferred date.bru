@@ -1,0 +1,36 @@
+meta {
+  name: Past preferred date
+  type: http
+  seq: 36
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{draftId}}/steps/confirmation
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "priority": "LOW",
+    "preferredDate": "{{pastDate}}",
+    "estimatedValue": {
+      "amount": "350.00",
+      "currency": "BRL"
+    },
+    "termsAccepted": true
+  }
+}
+
+tests {
+  test("HTTP 422", function () { expect(res.getStatus()).to.equal(422); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  test("Error code", function () { expect(data.code).to.equal("INVALID_SOLICITATION_DATA"); });
+  
+}

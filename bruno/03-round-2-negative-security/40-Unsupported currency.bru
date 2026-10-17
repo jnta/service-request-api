@@ -1,0 +1,36 @@
+meta {
+  name: Unsupported currency
+  type: http
+  seq: 40
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{draftId}}/steps/confirmation
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "priority": "LOW",
+    "preferredDate": "{{futureDate}}",
+    "estimatedValue": {
+      "amount": "350",
+      "currency": "USD"
+    },
+    "termsAccepted": true
+  }
+}
+
+tests {
+  test("HTTP 400", function () { expect(res.getStatus()).to.equal(400); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  test("Error code", function () { expect(data.code).to.equal("MALFORMED_REQUEST"); });
+  
+}

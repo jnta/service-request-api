@@ -1,0 +1,21 @@
+meta {
+  name: Submit validation fixture
+  type: http
+  seq: 49
+}
+
+post {
+  url: {{baseUrl}}/solicitations/{{draftId}}/submit
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("SUBMITTED"); });
+}

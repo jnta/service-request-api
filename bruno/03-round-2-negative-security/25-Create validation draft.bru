@@ -1,0 +1,28 @@
+meta {
+  name: Create validation draft
+  type: http
+  seq: 25
+}
+
+post {
+  url: {{baseUrl}}/solicitations
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (res.getStatus() === 201) {
+    bru.setVar("draftId", data.id);
+  }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("DRAFT"); expect(data.currentStep).to.equal("BASIC_DATA"); });
+}

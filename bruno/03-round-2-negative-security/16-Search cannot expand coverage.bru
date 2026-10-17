@@ -1,0 +1,21 @@
+meta {
+  name: Search cannot expand coverage
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/analyst/solicitations/search?state={{expectedState}}&size=100
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{outsideToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Positive search prerequisite", function () { expect(bru.getVar("coveredSearchVerified")).to.equal(true); });test("Response invariant", function () { expect(data.totalElements).to.equal(0); });test("Response invariant", function () { expect(data.items.length).to.equal(0); });
+}

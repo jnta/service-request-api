@@ -1,0 +1,31 @@
+meta {
+  name: Find rejected in search
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/analyst/solicitations/search?state={{expectedState}}&status=SUBMITTED&serviceType=INSTALLATION&size=100
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{analystToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  const found = res.getStatus() === 200 && data.items.some(item => item.id === bru.getVar("rejectedId"));
+  if (found) bru.setVar("coveredSearchVerified", true);
+  const attempt = bru.getVar("rejectedPoll") || 0;
+  if (!found && res.getStatus() === 200 && attempt < 20) {
+    bru.setVar("rejectedPoll", attempt + 1);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    bru.runner.setNextRequest("Find rejected in search");
+  } else {
+    test("Own fixture appears in eventual search", function () { expect(found).to.equal(true); });
+  }
+  
+}

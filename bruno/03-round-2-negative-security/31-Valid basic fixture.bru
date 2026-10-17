@@ -1,0 +1,30 @@
+meta {
+  name: Valid basic fixture
+  type: http
+  seq: 31
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{draftId}}/steps/basic-data
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "serviceType": "INSTALLATION",
+    "title": "Bruno acceptance installation",
+    "description": "Install equipment at the main office for HTTP acceptance."
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("DRAFT"); expect(data.currentStep).to.equal("ADDRESS"); });
+}

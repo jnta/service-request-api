@@ -1,0 +1,31 @@
+meta {
+  name: Find approved in search
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/analyst/solicitations/search?state={{expectedState}}&status=SUBMITTED&serviceType=INSTALLATION&size=100
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{analystToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  const found = res.getStatus() === 200 && data.items.some(item => item.id === bru.getVar("approvedId"));
+  if (found) bru.setVar("coveredSearchVerified", true);
+  const attempt = bru.getVar("approvedPoll") || 0;
+  if (!found && res.getStatus() === 200 && attempt < 20) {
+    bru.setVar("approvedPoll", attempt + 1);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    bru.runner.setNextRequest("Find approved in search");
+  } else {
+    test("Own fixture appears in eventual search", function () { expect(found).to.equal(true); });
+  }
+  
+}

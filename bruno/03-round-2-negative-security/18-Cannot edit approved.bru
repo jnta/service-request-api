@@ -1,0 +1,32 @@
+meta {
+  name: Cannot edit approved
+  type: http
+  seq: 18
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{approvedId}}/steps/basic-data
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "serviceType": "INSTALLATION",
+    "title": "Bruno acceptance installation",
+    "description": "Install equipment at the main office for HTTP acceptance."
+  }
+}
+
+tests {
+  test("HTTP 409", function () { expect(res.getStatus()).to.equal(409); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  test("Error code", function () { expect(data.code).to.equal("STATE_CONFLICT"); });
+  
+}

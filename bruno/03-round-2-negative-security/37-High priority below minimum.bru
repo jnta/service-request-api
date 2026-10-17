@@ -1,0 +1,36 @@
+meta {
+  name: High priority below minimum
+  type: http
+  seq: 37
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{draftId}}/steps/confirmation
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "priority": "HIGH",
+    "preferredDate": "{{futureDate}}",
+    "estimatedValue": {
+      "amount": "99.99",
+      "currency": "BRL"
+    },
+    "termsAccepted": true
+  }
+}
+
+tests {
+  test("HTTP 422", function () { expect(res.getStatus()).to.equal(422); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  test("Error code", function () { expect(data.code).to.equal("INVALID_SOLICITATION_DATA"); });
+  
+}

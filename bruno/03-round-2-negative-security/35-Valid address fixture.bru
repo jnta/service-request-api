@@ -1,0 +1,30 @@
+meta {
+  name: Valid address fixture
+  type: http
+  seq: 35
+}
+
+put {
+  url: {{baseUrl}}/solicitations/{{draftId}}/steps/address
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{clientToken}}
+}
+
+body:json {
+  {
+    "cep": "{{cep}}",
+    "number": "123",
+    "complement": "Bruno suite"
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("DRAFT"); expect(data.currentStep).to.equal("CONFIRMATION"); });
+}

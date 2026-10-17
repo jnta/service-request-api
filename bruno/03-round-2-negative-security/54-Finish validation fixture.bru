@@ -1,0 +1,29 @@
+meta {
+  name: Finish validation fixture
+  type: http
+  seq: 54
+}
+
+post {
+  url: {{baseUrl}}/analyst/solicitations/{{draftId}}/decide
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{analystToken}}
+}
+
+body:json {
+  {
+    "decision": "REJECT",
+    "comment": "Acceptance cleanup terminal state"
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("REJECTED"); });
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Initialize run
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/actuator/health
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  const runId = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  bru.setVar("runId", runId);
+  for (const identity of ["client", "other", "analyst", "outside"]) {
+    bru.setVar(identity + "Email", "bruno-" + identity + "-" + runId + "@example.com");
+  }
+  bru.setVar("futureDate", new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+  bru.setVar("pastDate", new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
+  bru.setVar("badToken", "invalid.jwt.token");
+  bru.setVar("coveredSearchVerified", false);
+  bru.setVar("approvedPoll", 0);
+  bru.setVar("rejectedPoll", 0);
+  if (bru.getEnvVar("expectedState") === bru.getEnvVar("outsideState")) throw new Error("Coverage states must differ");
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Response invariant", function () { expect(data.status).to.equal("UP"); });
+}

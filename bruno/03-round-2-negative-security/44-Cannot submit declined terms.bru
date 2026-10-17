@@ -1,0 +1,23 @@
+meta {
+  name: Cannot submit declined terms
+  type: http
+  seq: 44
+}
+
+post {
+  url: {{baseUrl}}/solicitations/{{draftId}}/submit
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+tests {
+  test("HTTP 422", function () { expect(res.getStatus()).to.equal(422); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  test("Error code", function () { expect(data.code).to.equal("SOLICITATION_INCOMPLETE"); });
+  test("Terms violation", function () { expect(data.errors.some(e => e.field === "termsAccepted")).to.equal(true); });
+}

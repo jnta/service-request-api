@@ -1,0 +1,21 @@
+meta {
+  name: Submit approved
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/solicitations/{{approvedId}}/submit
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{clientToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Workflow state", function () { expect(data.status).to.equal("SUBMITTED"); });
+}

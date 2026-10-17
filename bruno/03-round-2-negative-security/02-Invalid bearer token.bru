@@ -1,0 +1,22 @@
+meta {
+  name: Invalid bearer token
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/solicitations/{{approvedId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{badToken}}
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+  
+}
