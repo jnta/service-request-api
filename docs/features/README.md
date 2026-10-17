@@ -39,3 +39,4 @@ Testcontainers (PostgreSQL + Elasticsearch), WireMock (ViaCEP) and REST Assured/
 | `address-step.feature` | 6 | ViaCEP lookup and address-step behavior |
 | `confirmation-step.feature` | 7 | Confirmation data and validation |
 | `submission.feature` | 8 | Completeness, terms, ownership, and submission transitions |
+| `analyst-authorization.feature` | 9 | Client ownership, analyst state coverage, and admin access |

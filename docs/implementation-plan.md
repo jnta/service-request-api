@@ -1065,7 +1065,7 @@ Scenario: Non-owner submits solicitation
 
 ---
 
-# Fase 9 — Autorização de Analyst por UF
+# Fase 9 — Autorização de Analyst por UF — COMPLETED
 
 Antes de implementar decisão, eu faria a policy.
 

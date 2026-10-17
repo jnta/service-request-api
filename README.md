@@ -166,7 +166,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 6 | Address step and ViaCEP integration | Complete |
 | 7 | Confirmation step and BRL `Money` validation | Complete |
 | 8 | Complete solicitation submission | Complete |
-| 9–17 | Analyst authorization and workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 9 | Analyst geographic authorization | Complete |
+| 10–17 | Analyst review workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 

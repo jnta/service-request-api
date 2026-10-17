@@ -4,6 +4,7 @@ import com.jnta.user.application.exception.EmailAlreadyRegisteredException;
 import com.jnta.user.application.port.out.UserRepository;
 import com.jnta.user.domain.EmailAddress;
 import com.jnta.user.domain.User;
+import com.jnta.shared.identity.UserId;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,6 +26,12 @@ public class JpaUserRepositoryAdapter implements UserRepository {
         } catch (DataIntegrityViolationException exception) {
             throw new EmailAlreadyRegisteredException(user.email());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<User> findById(UserId id) {
+        return repository.findById(id.value()).map(mapper::toDomain);
     }
 
     @Override

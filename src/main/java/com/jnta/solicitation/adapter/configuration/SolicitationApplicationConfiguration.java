@@ -9,6 +9,7 @@ import com.jnta.solicitation.application.UpdateConfirmationUseCase;
 import com.jnta.solicitation.application.port.out.PostalCodeGateway;
 import com.jnta.solicitation.application.port.out.SolicitationRepository;
 import com.jnta.solicitation.application.policy.SolicitationAccessPolicy;
+import com.jnta.user.application.port.out.UserRepository;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,38 +30,43 @@ public class SolicitationApplicationConfiguration {
     @Bean
     GetSolicitationUseCase getSolicitationUseCase(
             SolicitationRepository repository,
+            UserRepository users,
             SolicitationAccessPolicy accessPolicy) {
-        return new GetSolicitationUseCase(repository, accessPolicy);
+        return new GetSolicitationUseCase(repository, users, accessPolicy);
     }
 
     @Bean
     UpdateBasicDataUseCase updateBasicDataUseCase(
             SolicitationRepository repository,
+            UserRepository users,
             SolicitationAccessPolicy accessPolicy) {
-        return new UpdateBasicDataUseCase(repository, accessPolicy);
+        return new UpdateBasicDataUseCase(repository, users, accessPolicy);
     }
 
     @Bean
     UpdateAddressUseCase updateAddressUseCase(
             SolicitationRepository repository,
+            UserRepository users,
             SolicitationAccessPolicy accessPolicy,
             PostalCodeGateway postalCodeGateway) {
-        return new UpdateAddressUseCase(repository, accessPolicy, postalCodeGateway);
+        return new UpdateAddressUseCase(repository, users, accessPolicy, postalCodeGateway);
     }
 
     @Bean
     UpdateConfirmationUseCase updateConfirmationUseCase(
             SolicitationRepository repository,
+            UserRepository users,
             SolicitationAccessPolicy accessPolicy,
             Clock clock) {
-        return new UpdateConfirmationUseCase(repository, accessPolicy, clock);
+        return new UpdateConfirmationUseCase(repository, users, accessPolicy, clock);
     }
 
     @Bean
     SubmitSolicitationUseCase submitSolicitationUseCase(
             SolicitationRepository repository,
+            UserRepository users,
             SolicitationAccessPolicy accessPolicy,
             Clock clock) {
-        return new SubmitSolicitationUseCase(repository, accessPolicy, clock);
+        return new SubmitSolicitationUseCase(repository, users, accessPolicy, clock);
     }
 }

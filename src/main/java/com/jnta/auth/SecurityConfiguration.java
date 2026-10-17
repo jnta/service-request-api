@@ -28,9 +28,9 @@ public class SecurityConfiguration {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/admin/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/solicitations/**").hasRole("CLIENT")
-                        .requestMatchers(HttpMethod.PUT, "/solicitations/**").hasRole("CLIENT")
-                        .requestMatchers(HttpMethod.GET, "/solicitations/**").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.POST, "/solicitations").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.PUT, "/solicitations/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/solicitations/**").authenticated()
                         .anyRequest().authenticated());
         return http.build();
     }

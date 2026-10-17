@@ -27,6 +27,7 @@ import com.jnta.solicitation.domain.money.Money;
 import com.jnta.solicitation.domain.confirmation.Priority;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -76,6 +78,9 @@ class SolicitationApiIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private SolicitationRepository solicitationRepository;
@@ -212,6 +217,53 @@ class SolicitationApiIntegrationTest {
                         .contentType("application/json")
                         .content(basicDataRequest("Changed title")))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("given an analyst covering DF, when reading a DF solicitation, then access is allowed")
+    void shouldAllowAnalystToReadCoveredState() throws Exception {
+        var client = registerAndLogin("covered-client@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeBasicData(solicitationId, client.accessToken());
+        stubAddressForState("70040902", "DF");
+        completeAddress(solicitationId, client.accessToken());
+        String analystToken = createRoleUserAndLogin("analyst-df@example.com", "ANALYST", Set.of("DF"));
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.address.state").value("DF"));
+    }
+
+    @Test
+    @DisplayName("given an analyst covering DF, when reading an SP solicitation, then access is denied")
+    void shouldDenyAnalystAccessToUncoveredState() throws Exception {
+        var client = registerAndLogin("uncovered-client@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeBasicData(solicitationId, client.accessToken());
+        stubAddressForState("01001000", "SP");
+        completeAddressWithCep(solicitationId, client.accessToken(), "01001000");
+        String analystToken = createRoleUserAndLogin("analyst-only-df@example.com", "ANALYST", Set.of("DF"));
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analystToken)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("given an ADMIN, when reading a solicitation from any state, then access is allowed")
+    void shouldAllowAdminToReadAnyState() throws Exception {
+        var client = registerAndLogin("admin-any-state-client@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeBasicData(solicitationId, client.accessToken());
+        stubAddressForState("01001000", "SP");
+        completeAddressWithCep(solicitationId, client.accessToken(), "01001000");
+        String adminToken = createRoleUserAndLogin("admin-any-state@example.com", "ADMIN", Set.of());
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.address.state").value("SP"));
     }
 
     @Test
@@ -473,16 +525,18 @@ class SolicitationApiIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn();
         String userId = JsonPath.read(registration.getResponse().getContentAsString(), "$.id");
+        return new TestIdentity(userId, login(email, PASSWORD));
+    }
 
+    private String login(String email, String password) throws Exception {
         MvcResult login = mockMvc.perform(post("/auth/login")
                         .contentType("application/json")
                         .content("""
                                 {"email":"%s","password":"%s"}
-                                """.formatted(email, PASSWORD)))
+                                """.formatted(email, password)))
                 .andExpect(status().isOk())
                 .andReturn();
-        String token = JsonPath.read(login.getResponse().getContentAsString(), "$.accessToken");
-        return new TestIdentity(userId, token);
+        return JsonPath.read(login.getResponse().getContentAsString(), "$.accessToken");
     }
 
     private String createSolicitation(String accessToken) throws Exception {
@@ -524,14 +578,35 @@ class SolicitationApiIntegrationTest {
     }
 
     private void completeAddress(String solicitationId, String accessToken) throws Exception {
-        stubViaCep("70040902", 200, """
-                {"cep":"70040-902","logradouro":"Main Street","complemento":"","unidade":"","bairro":"Central","localidade":"Brasilia","uf":"DF","estado":"Distrito Federal","regiao":"Centro-Oeste","ibge":"5300108","gia":"","ddd":"61","siafi":"9701"}
-                """);
+        stubAddressForState("70040902", "DF");
+        completeAddressWithCep(solicitationId, accessToken, "70040902");
+    }
+
+    private void completeAddressWithCep(String solicitationId, String accessToken, String cep) throws Exception {
         mockMvc.perform(put("/solicitations/{id}/steps/address", solicitationId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
                         .contentType("application/json")
-                        .content(addressRequest("70040902", "123", null)))
+                        .content(addressRequest(cep, "123", null)))
                 .andExpect(status().isOk());
+    }
+
+    private String createRoleUserAndLogin(String email, String role, Set<String> coverage) throws Exception {
+        UUID userId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into users (id, name, email, password_hash, user_role) values (?, ?, ?, ?, ?)",
+                userId, "Test " + role, email, passwordEncoder.encode(PASSWORD), role);
+        coverage.forEach(state -> jdbcTemplate.update(
+                "insert into analyst_states (analyst_id, state) values (?, ?)", userId, state));
+        return login(email, PASSWORD);
+    }
+
+    private static void stubAddressForState(String cep, String state) {
+        var city = state.equals("DF") ? "Brasilia" : "Sao Paulo";
+        var neighborhood = state.equals("DF") ? "Central" : "Se";
+        var street = state.equals("DF") ? "Main Street" : "Praca da Se";
+        stubViaCep(cep, 200, """
+                {"cep":"%s","logradouro":"%s","complemento":"","unidade":"","bairro":"%s","localidade":"%s","uf":"%s","estado":"","regiao":"","ibge":"","gia":"","ddd":"","siafi":""}
+                """.formatted(cep, street, neighborhood, city, state));
     }
 
     private void completeForSubmission(String solicitationId, String accessToken, boolean termsAccepted) throws Exception {
