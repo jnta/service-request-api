@@ -6,7 +6,7 @@ These files describe the expected behaviour of the system in Gherkin.
 a dependency: the build stays simple and the feedback loop fast, without giving up business
 language.
 
-Each scenario is implemented as a JUnit test whose `@DisplayName` mirrors the scenario, usually
+Unit scenarios are implemented as JUnit tests whose `@DisplayName` mirrors the scenario, usually
 shaped like:
 
 ```java
@@ -24,8 +24,7 @@ class WhenClientSubmitsSolicitation {
 }
 ```
 
-Acceptance scenarios (end-to-end) live in `src/test/java/com/jnta/acceptance` and use
-Testcontainers (PostgreSQL + Elasticsearch), WireMock (ViaCEP) and REST Assured/MockMvc.
+Integration and end-to-end scenarios are deferred to phases 15–16 and will be reintroduced there.
 
 ## Index
 
@@ -43,3 +42,4 @@ Testcontainers (PostgreSQL + Elasticsearch), WireMock (ViaCEP) and REST Assured/
 | `analyst-review.feature` | 10 | Review start, decisions, coverage, and conflicts |
 | `solicitation-search.feature` | 11 | Elasticsearch filters, pagination, and coverage enforcement |
 | `transactional-outbox.feature` | 12 | Atomic event persistence, retries, and idempotent indexing |
+| `audit-trail.feature` | 13 | AOP audit records, success outcomes, and read exclusion |

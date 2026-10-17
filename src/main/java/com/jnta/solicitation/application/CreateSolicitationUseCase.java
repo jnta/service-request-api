@@ -1,5 +1,7 @@
 package com.jnta.solicitation.application;
 
+import com.jnta.audit.application.annotation.Audit;
+import com.jnta.audit.domain.AuditAction;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.port.out.SolicitationRepository;
 import com.jnta.solicitation.application.port.out.VersionedSolicitation;
@@ -14,6 +16,7 @@ public class CreateSolicitationUseCase {
         this.solicitationRepository = solicitationRepository;
     }
 
+    @Audit(action = AuditAction.SOLICITATION_CREATED)
     public Solicitation create(UserId owner) {
         var solicitation = Solicitation.create(SolicitationId.generate(), owner);
         return solicitationRepository.save(VersionedSolicitation.newEntry(solicitation)).solicitation();

@@ -1409,7 +1409,7 @@ Scenario: Processing the same event more than once
 
 ---
 
-# Fase 13 — Auditoria via AOP
+# Fase 13 — Auditoria via AOP — COMPLETED
 
 ## Annotation
 

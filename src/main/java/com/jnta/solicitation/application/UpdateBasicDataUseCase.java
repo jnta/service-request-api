@@ -1,5 +1,7 @@
 package com.jnta.solicitation.application;
 
+import com.jnta.audit.application.annotation.Audit;
+import com.jnta.audit.domain.AuditAction;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.command.UpdateBasicDataCommand;
 import com.jnta.solicitation.application.exception.SolicitationNotFoundException;
@@ -27,6 +29,7 @@ public class UpdateBasicDataUseCase {
         this.accessPolicy = accessPolicy;
     }
 
+    @Audit(action = AuditAction.SOLICITATION_UPDATED)
     public Solicitation update(SolicitationId id, UserId requester, UpdateBasicDataCommand command) {
         var stored = solicitationRepository.findById(id)
                 .orElseThrow(() -> new SolicitationNotFoundException(id));

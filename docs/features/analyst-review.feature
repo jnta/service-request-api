@@ -16,6 +16,18 @@ Feature: Analyst review workflow
     When the analyst rejects it with a valid comment
     Then status should become REJECTED
 
+  Scenario: Auditing an approval
+    Given an analyst approves a solicitation
+    Then an audit record should identify the analyst
+    And the solicitation
+    And the APPROVED action
+
+  Scenario: Auditing a rejection
+    Given an analyst rejects a solicitation
+    Then an audit record should identify the analyst
+    And the solicitation
+    And the REJECTED action
+
   Scenario: Analyst cannot decide outside coverage
     Given an analyst covers DF
     And a solicitation belongs to SP

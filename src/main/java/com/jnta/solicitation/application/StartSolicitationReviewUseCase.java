@@ -1,5 +1,7 @@
 package com.jnta.solicitation.application;
 
+import com.jnta.audit.application.annotation.Audit;
+import com.jnta.audit.domain.AuditAction;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.exception.SolicitationAccessDeniedException;
 import com.jnta.solicitation.application.exception.SolicitationNotFoundException;
@@ -25,6 +27,7 @@ public class StartSolicitationReviewUseCase {
         this.accessPolicy = accessPolicy;
     }
 
+    @Audit(action = AuditAction.SOLICITATION_REVIEW_STARTED)
     public Solicitation start(SolicitationId id, UserId reviewerId) {
         VersionedSolicitation stored = solicitationRepository.findById(id)
                 .orElseThrow(() -> new SolicitationNotFoundException(id));

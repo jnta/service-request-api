@@ -1,5 +1,7 @@
 package com.jnta.solicitation.application;
 
+import com.jnta.audit.application.annotation.Audit;
+import com.jnta.audit.domain.AuditAction;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.exception.SolicitationNotFoundException;
 import com.jnta.solicitation.application.exception.SolicitationAccessDeniedException;
@@ -29,6 +31,7 @@ public class SubmitSolicitationUseCase {
         this.clock = clock;
     }
 
+    @Audit(action = AuditAction.SOLICITATION_SUBMITTED)
     public Solicitation submit(SolicitationId id, UserId requester) {
         VersionedSolicitation stored = solicitationRepository.findById(id)
                 .orElseThrow(() -> new SolicitationNotFoundException(id));

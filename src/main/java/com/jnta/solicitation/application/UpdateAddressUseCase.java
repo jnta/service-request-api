@@ -1,5 +1,7 @@
 package com.jnta.solicitation.application;
 
+import com.jnta.audit.application.annotation.Audit;
+import com.jnta.audit.domain.AuditAction;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.command.UpdateAddressCommand;
 import com.jnta.solicitation.application.exception.SolicitationNotFoundException;
@@ -32,6 +34,7 @@ public class UpdateAddressUseCase {
         this.postalCodeGateway = postalCodeGateway;
     }
 
+    @Audit(action = AuditAction.SOLICITATION_UPDATED)
     public Solicitation update(SolicitationId id, UserId requester, UpdateAddressCommand command) {
         VersionedSolicitation stored = solicitationRepository.findById(id)
                 .orElseThrow(() -> new SolicitationNotFoundException(id));

@@ -1,5 +1,7 @@
 package com.jnta.solicitation.application;
 
+import com.jnta.audit.application.annotation.Audit;
+import com.jnta.audit.domain.AuditAction;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.command.DecideSolicitationCommand;
 import com.jnta.solicitation.application.exception.SolicitationAccessDeniedException;
@@ -27,6 +29,7 @@ public class DecideSolicitationUseCase {
         this.accessPolicy = accessPolicy;
     }
 
+    @Audit(action = AuditAction.SOLICITATION_DECIDED)
     public Solicitation decide(SolicitationId id, UserId reviewerId, DecideSolicitationCommand command) {
         VersionedSolicitation stored = solicitationRepository.findById(id)
                 .orElseThrow(() -> new SolicitationNotFoundException(id));

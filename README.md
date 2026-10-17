@@ -61,7 +61,7 @@ mise exec -- ./gradlew bootRun
 mise exec -- ./gradlew test
 ```
 
-Integration tests use Testcontainers with real PostgreSQL and Elasticsearch instances. Spring Boot derives their connection details through `@ServiceConnection`; tests do not hard-code hosts, ports, or passwords.
+The current test suite focuses on domain and application unit tests. Integration and end-to-end tests are deferred to the acceptance-test phases; Testcontainers dependencies and configuration are retained for that work.
 
 The test strategy follows a pyramid: many domain unit tests, a smaller number of integration tests, and a few end-to-end acceptance tests. BDD scenarios are documented in [`docs/features/`](docs/features/) and implemented with JUnit; Cucumber is not used.
 
@@ -98,7 +98,7 @@ The reasoning and trade-offs are documented in the [ADRs](docs/adr/):
 | postgres | `postgres:17-alpine` | 5432 |
 | elasticsearch | `docker.elastic.co/elasticsearch/elasticsearch:9.3.3` | 9200 |
 
-Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is split across `V001__create_users.sql`, `V002__create_solicitations.sql`, `V003__create_analyst_state_coverage.sql`, and `V004__create_outbox_events.sql`. Existing local databases that applied the former bootstrap migration must be recreated before use (`docker compose down -v`). After this initial restructuring, applied or shared migrations are immutable.
+Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is split across `V001__create_users.sql`, `V002__create_solicitations.sql`, `V003__create_analyst_state_coverage.sql`, `V004__create_outbox_events.sql`, and `V005__create_audit_logs.sql`. Existing local databases that applied the former bootstrap migration must be recreated before use (`docker compose down -v`). After this initial restructuring, applied or shared migrations are immutable.
 
 ## Domain and workflow
 
@@ -149,7 +149,7 @@ Solicitation changes and outbox events are committed in the same PostgreSQL tran
 
 ## Audit and errors
 
-Mutation audit records identify the actor, action, aggregate, timestamp, and outcome without storing request bodies. API errors use a consistent response shape with a stable error code, message, field errors where applicable, and timestamp.
+An AOP interceptor writes audit records for solicitation creation, updates, submission, review start, and analyst decisions. Records identify the actor, action, aggregate, timestamp, and outcome without storing request bodies; failed operations are recorded, while reads are not audited. API errors use a consistent response shape with a stable error code, message, field errors where applicable, and timestamp.
 
 Expected HTTP mappings include `400` for malformed input, `401` for unauthenticated requests, `403` for forbidden access, `404` for missing resources, `409` for state or concurrency conflicts, `422` for business validation, and `502`/`503` for ViaCEP failures.
 
@@ -172,7 +172,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 10 | Analyst review workflow | Complete |
 | 11 | Elasticsearch search projection and coverage-filtered pagination | Complete |
 | 12 | Transactional outbox and reliable search indexing | Complete |
-| 13–17 | Audit, API contract, acceptance tests, and delivery | Pending |
+| 13 | AOP audit trail | Complete |
+| 14–17 | API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 
