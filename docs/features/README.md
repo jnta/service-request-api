@@ -42,3 +42,4 @@ Testcontainers (PostgreSQL + Elasticsearch), WireMock (ViaCEP) and REST Assured/
 | `analyst-authorization.feature` | 9 | Client ownership, analyst state coverage, and admin access |
 | `analyst-review.feature` | 10 | Review start, decisions, coverage, and conflicts |
 | `solicitation-search.feature` | 11 | Elasticsearch filters, pagination, and coverage enforcement |
+| `transactional-outbox.feature` | 12 | Atomic event persistence, retries, and idempotent indexing |

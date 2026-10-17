@@ -1,6 +1,9 @@
 package com.jnta.search.adapter.out.elasticsearch;
 
 import com.jnta.TestcontainersConfiguration;
+import com.jnta.outbox.application.OutboxProcessor;
+import com.jnta.outbox.application.port.out.OutboxEventRepository;
+import com.jnta.outbox.domain.OutboxEvent;
 import com.jnta.shared.geography.BrazilianState;
 import com.jnta.shared.identity.UserId;
 import com.jnta.auth.application.port.out.AccessTokenIssuer;
@@ -81,6 +84,12 @@ class SolicitationSearchIntegrationTest {
     private ElasticsearchOperations elasticsearchOperations;
 
     @Autowired
+    private OutboxProcessor outboxProcessor;
+
+    @Autowired
+    private OutboxEventRepository outboxEventRepository;
+
+    @Autowired
     private Clock clock;
 
     @Autowired
@@ -91,6 +100,7 @@ class SolicitationSearchIntegrationTest {
 
     @BeforeEach
     void clearState() {
+        jdbcTemplate.update("delete from outbox_events");
         jdbcTemplate.update("delete from analyst_states");
         jdbcTemplate.update("delete from solicitations");
         jdbcTemplate.update("delete from users");
@@ -178,6 +188,24 @@ class SolicitationSearchIntegrationTest {
                         org.hamcrest.Matchers.containsInAnyOrder("DF", "GO")));
     }
 
+    @Test
+    @DisplayName("given an already indexed solicitation event, when it is processed again, then the search document is not duplicated")
+    void shouldProcessDuplicateOutboxEventIdempotently() throws Exception {
+        var analyst = analystWithCoverage(Set.of(BrazilianState.DF));
+        var solicitation = createSolicitation(BrazilianState.DF, Priority.MEDIUM, SolicitationStatus.SUBMITTED);
+        refreshIndex();
+
+        outboxEventRepository.append(OutboxEvent.solicitationChanged(solicitation.id().value(), clock.instant()));
+        outboxProcessor.processPendingBatch();
+        elasticsearchOperations.indexOps(SolicitationSearchDocument.class).refresh();
+
+        mockMvc.perform(get("/analyst/solicitations/search")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analyst))
+                        .param("status", "SUBMITTED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
     private User analystWithCoverage(Set<BrazilianState> coverage) {
         var analyst = User.createManaged(
                 UserId.generate(),
@@ -227,6 +255,7 @@ class SolicitationSearchIntegrationTest {
     }
 
     private void refreshIndex() {
+        outboxProcessor.processPendingBatch();
         elasticsearchOperations.indexOps(SolicitationSearchDocument.class).refresh();
     }
 

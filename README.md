@@ -98,7 +98,7 @@ The reasoning and trade-offs are documented in the [ADRs](docs/adr/):
 | postgres | `postgres:17-alpine` | 5432 |
 | elasticsearch | `docker.elastic.co/elasticsearch/elasticsearch:9.3.3` | 9200 |
 
-Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is split across `V001__create_users.sql`, `V002__create_solicitations.sql`, and `V003__create_analyst_state_coverage.sql`. Existing local databases that applied the former bootstrap migration must be recreated before use (`docker compose down -v`). After this initial restructuring, applied or shared migrations are immutable.
+Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is split across `V001__create_users.sql`, `V002__create_solicitations.sql`, `V003__create_analyst_state_coverage.sql`, and `V004__create_outbox_events.sql`. Existing local databases that applied the former bootstrap migration must be recreated before use (`docker compose down -v`). After this initial restructuring, applied or shared migrations are immutable.
 
 ## Domain and workflow
 
@@ -145,7 +145,7 @@ Health, API documentation, registration, and login endpoints are public. `POST /
 
 Elasticsearch serves search queries only. Reads by solicitation ID and all business writes use PostgreSQL. Search results are eventually consistent, and analyst coverage is always intersected with the requested filters.
 
-The current search phase updates Elasticsearch directly after persistence as an intermediate step. This leaves a failure window where PostgreSQL commits but search indexing fails. Phase 12 replaces it with a transactional outbox and asynchronous, idempotent indexing so Elasticsearch outages do not fail business writes.
+Solicitation changes and outbox events are committed in the same PostgreSQL transaction. A background processor updates Elasticsearch asynchronously and idempotently. If Elasticsearch is unavailable, the business transaction can still succeed and pending events are retried.
 
 ## Audit and errors
 
@@ -171,7 +171,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 9 | Analyst geographic authorization | Complete |
 | 10 | Analyst review workflow | Complete |
 | 11 | Elasticsearch search projection and coverage-filtered pagination | Complete |
-| 12–17 | Transactional outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 12 | Transactional outbox and reliable search indexing | Complete |
+| 13–17 | Audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 

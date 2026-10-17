@@ -5,3 +5,7 @@ security:
     access-token-ttl: PT15M
   bootstrap-admin:
     enabled: false
+
+outbox:
+  processor:
+    enabled: false

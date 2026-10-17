@@ -1,6 +1,6 @@
 # ADR 0004: Transactional outbox
 
-- **Status:** Accepted; implementation planned for phase 12
+- **Status:** Accepted and implemented
 - **Date:** 2026-10-16
 
 ## Context
@@ -11,7 +11,7 @@ Solicitation changes must eventually update the Elasticsearch projection. Postgr
 
 Persist an outbox event in the same PostgreSQL transaction as each relevant domain change. A background processor reads pending events, updates Elasticsearch, and marks events as processed. Indexing by solicitation ID makes retries idempotent. Failed events remain pending for retry.
 
-The initial search phase may index directly as an intermediate step; the outbox replaces that mechanism in phase 12.
+The search projection is indexed by the processor after the database transaction commits.
 
 ## Consequences
 

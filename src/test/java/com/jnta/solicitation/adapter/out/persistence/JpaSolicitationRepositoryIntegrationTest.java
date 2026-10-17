@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.jnta.TestcontainersConfiguration;
+import com.jnta.outbox.adapter.out.persistence.JpaOutboxEventRepositoryAdapter;
+import com.jnta.shared.config.ClockConfiguration;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.exception.ConcurrentSolicitationModificationException;
 import com.jnta.solicitation.application.port.out.SolicitationRepository;
@@ -47,7 +49,12 @@ import org.testcontainers.utility.DockerImageName;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(JpaSolicitationRepositoryAdapter.class)
+@Import({
+    JpaSolicitationRepositoryAdapter.class,
+    JpaOutboxEventRepositoryAdapter.class,
+    OutboxWritingSolicitationRepository.class,
+    ClockConfiguration.class
+})
 @Testcontainers
 class JpaSolicitationRepositoryIntegrationTest {
 
@@ -66,6 +73,20 @@ class JpaSolicitationRepositoryIntegrationTest {
 
     @Autowired
     private PlatformTransactionManager transactionManager;
+
+    @Test
+    @DisplayName("given a new solicitation, when saved, then its search projection event is committed")
+    void shouldSaveOutboxEventWithSolicitation() {
+        var solicitation = Solicitation.create(SolicitationId.generate(), createClient());
+
+        solicitationRepository.save(VersionedSolicitation.newEntry(solicitation));
+
+        Integer eventCount = jdbcTemplate.queryForObject(
+                "select count(*) from outbox_events where aggregate_id = ? and processed_at is null",
+                Integer.class,
+                solicitation.id().value());
+        assertThat(eventCount).isEqualTo(1);
+    }
 
     @Test
     @DisplayName("given a new draft, when persisted and loaded, then its status and first step are preserved")
@@ -150,6 +171,28 @@ class JpaSolicitationRepositoryIntegrationTest {
         var persisted = inTransaction(() -> solicitationRepository.findById(draft.id()).orElseThrow());
         assertThat(persisted.solicitation().basicData().title()).isEqualTo("First update");
         assertThat(persisted.version()).isEqualTo(updated.version());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("given an outbox write failure, when a solicitation transaction rolls back, then neither record is persisted")
+    void shouldRollbackSolicitationAndOutboxTogether() {
+        var owner = createClientInTransaction();
+        var solicitation = Solicitation.create(SolicitationId.generate(), owner);
+        var transaction = new TransactionTemplate(transactionManager);
+        transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        transaction.execute(status -> {
+            solicitationRepository.save(VersionedSolicitation.newEntry(solicitation));
+            status.setRollbackOnly();
+            return null;
+        });
+
+        Integer solicitationCount = jdbcTemplate.queryForObject(
+                "select count(*) from solicitations where id = ?", Integer.class, solicitation.id().value());
+        Integer eventCount = jdbcTemplate.queryForObject(
+                "select count(*) from outbox_events where aggregate_id = ?", Integer.class, solicitation.id().value());
+        assertThat(solicitationCount).isZero();
+        assertThat(eventCount).isZero();
     }
 
     @Test

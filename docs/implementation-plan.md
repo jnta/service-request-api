@@ -1301,7 +1301,7 @@ Scenario: Search filter is intersected with analyst coverage
 
 ---
 
-# Fase 12 — Transactional Outbox
+# Fase 12 — Transactional Outbox — COMPLETED
 
 Agora substituímos dual write.
 
