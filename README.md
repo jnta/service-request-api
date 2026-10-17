@@ -58,9 +58,9 @@ mise exec -- ./gradlew bootRun
 mise exec -- ./gradlew test
 ```
 
-The current test suite focuses on domain and application unit tests. Integration and end-to-end tests are deferred; Testcontainers dependencies and configuration are retained for that work.
+The suite includes domain and application unit tests plus acceptance tests for the complete solicitation lifecycle and its main security safeguards. The acceptance suite uses Testcontainers for PostgreSQL and Elasticsearch, WireMock for ViaCEP, and MockMvc.
 
-BDD scenarios are documented in [`docs/features/`](docs/features/). The retained unit scenarios run with JUnit; integration and end-to-end scenarios are planned for later work. Cucumber is not used.
+BDD scenarios are documented in [`docs/features/`](docs/features/) and implemented with JUnit. Cucumber is not used.
 
 ## Architecture
 
@@ -221,7 +221,7 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 12 | Transactional outbox and reliable search indexing | Complete |
 | 13 | AOP audit trail | Complete |
 | 14 | Consistent API error contract | Complete |
-| 15–16 | End-to-end acceptance scenarios | Deferred |
+| 15–16 | End-to-end lifecycle and security acceptance scenarios | Implemented; verification pending |
 | 17 | OpenAPI, observability, and delivery documentation | Complete |
 
 ## Production evolution

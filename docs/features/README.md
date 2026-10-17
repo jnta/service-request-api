@@ -24,7 +24,8 @@ class WhenClientSubmitsSolicitation {
 }
 ```
 
-Integration and end-to-end scenarios are deferred to phases 15–16 and will be reintroduced there.
+Acceptance scenarios for phases 15–16 live in `src/test/java/com/jnta/acceptance` and use
+Testcontainers (PostgreSQL and Elasticsearch), WireMock (ViaCEP), and MockMvc.
 
 ## Index
 
@@ -44,4 +45,6 @@ Integration and end-to-end scenarios are deferred to phases 15–16 and will be 
 | `transactional-outbox.feature` | 12 | Atomic event persistence, retries, and idempotent indexing |
 | `audit-trail.feature` | 13 | AOP audit records, success outcomes, and read exclusion |
 | `api-error-contract.feature` | 14 | Stable error format, status mappings, and field validation details |
+| `complete-solicitation-lifecycle.feature` | 15 | Client submission through analyst approval, search, and audit |
+| `solicitation-security-acceptance.feature` | 16 | End-to-end ownership, coverage, and workflow safeguards |
 | `developer-experience.feature` | 17 | Full-stack startup, health, migrations, and API documentation |

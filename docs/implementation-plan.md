@@ -1539,7 +1539,7 @@ Scenario: Concurrent update
 
 ---
 
-# Fase 15 — BDD end-to-end completo — DEFERRED
+# Fase 15 — BDD end-to-end completo — IMPLEMENTED, VERIFICATION PENDING
 
 Aqui eu teria pelo menos **um cenário que conta a história inteira do sistema**.
 
@@ -1592,7 +1592,7 @@ Esse cenário sozinho valida quase toda a arquitetura.
 
 ---
 
-# Fase 16 — Cenários BDD negativos end-to-end — DEFERRED
+# Fase 16 — Cenários BDD negativos end-to-end — IMPLEMENTED, VERIFICATION PENDING
 
 Também faria um segundo grupo focado em segurança.
 
