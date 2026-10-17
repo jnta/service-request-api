@@ -696,7 +696,7 @@ Scenario: Client cannot create an admin
 
 ---
 
-# Fase 4 — Criar e consultar Solicitação
+# Fase 4 — Criar e consultar Solicitação — COMPLETED
 
 Agora temos o primeiro fluxo HTTP real.
 
