@@ -32,6 +32,12 @@ public class JpaOutboxEventRepositoryAdapter implements OutboxEventRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public long countPending() {
+        return repository.countByProcessedAtIsNull();
+    }
+
+    @Override
     @Transactional
     public void markProcessed(UUID eventId, Instant processedAt) {
         var entity = repository.findById(eventId).orElseThrow();

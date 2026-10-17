@@ -27,8 +27,9 @@ public class OutboxProcessor {
         this.clock = clock;
     }
 
-    public int processPendingBatch() {
+    public OutboxBatchResult processPendingBatch() {
         int processed = 0;
+        int failed = 0;
         for (OutboxEvent event : outboxEventRepository.findPending(BATCH_SIZE)) {
             try {
                 process(event);
@@ -36,9 +37,10 @@ public class OutboxProcessor {
                 processed++;
             } catch (RuntimeException exception) {
                 outboxEventRepository.recordFailure(event.id(), exception.getClass().getSimpleName());
+                failed++;
             }
         }
-        return processed;
+        return new OutboxBatchResult(processed, failed);
     }
 
     private void process(OutboxEvent event) {

@@ -11,6 +11,8 @@ public interface OutboxEventRepository {
 
     List<OutboxEvent> findPending(int limit);
 
+    long countPending();
+
     void markProcessed(UUID eventId, Instant processedAt);
 
     void recordFailure(UUID eventId, String error);

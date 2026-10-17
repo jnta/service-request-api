@@ -4,11 +4,11 @@ An API for service requests with a multi-step workflow, geographic analyst autho
 
 This repository follows [`docs/implementation-plan.md`](docs/implementation-plan.md). The current phase status is tracked in the [roadmap](#roadmap).
 
-## Overview
+## Challenge overview
 
 Clients create a request and complete it in three steps: basic data, address, and confirmation. Once submitted, a request becomes read-only and enters the analyst queue. Analysts can access requests only in the states covered by their assigned regions, then start a review and approve or reject the request.
 
-## Run the application
+## How to run
 
 ### Requirements
 
@@ -31,10 +31,7 @@ Check application health:
 curl localhost:8080/actuator/health
 ```
 
-API documentation:
-
-- Swagger UI: <http://localhost:8080/swagger-ui.html>
-- OpenAPI JSON: <http://localhost:8080/v3/api-docs>
+The API documentation is available at the URLs listed in [API documentation](#api-documentation).
 
 Stop the services and remove their data volumes:
 
@@ -42,7 +39,7 @@ Stop the services and remove their data volumes:
 docker compose down -v
 ```
 
-The current user must be able to access Docker. If needed, add the user to the `docker` group and start a new login session. Integration tests also require Docker access for Testcontainers.
+The current user must be able to access Docker. If needed, add the user to the `docker` group and start a new login session.
 
 ### Run the application outside Docker
 
@@ -55,15 +52,15 @@ export BOOTSTRAP_ADMIN_PASSWORD='replace-with-a-local-password'
 mise exec -- ./gradlew bootRun
 ```
 
-## Test
+## How to test
 
 ```bash
 mise exec -- ./gradlew test
 ```
 
-The current test suite focuses on domain and application unit tests. Integration and end-to-end tests are deferred to the acceptance-test phases; Testcontainers dependencies and configuration are retained for that work.
+The current test suite focuses on domain and application unit tests. Integration and end-to-end tests are deferred; Testcontainers dependencies and configuration are retained for that work.
 
-The test strategy follows a pyramid: many domain unit tests, a smaller number of integration tests, and a few end-to-end acceptance tests. BDD scenarios are documented in [`docs/features/`](docs/features/) and implemented with JUnit; Cucumber is not used.
+BDD scenarios are documented in [`docs/features/`](docs/features/). The retained unit scenarios run with JUnit; integration and end-to-end scenarios are planned for later work. Cucumber is not used.
 
 ## Architecture
 
@@ -98,13 +95,17 @@ The reasoning and trade-offs are documented in the [ADRs](docs/adr/):
 | postgres | `postgres:17-alpine` | 5432 |
 | elasticsearch | `docker.elastic.co/elasticsearch/elasticsearch:9.3.3` | 9200 |
 
-Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is split across `V001__create_users.sql`, `V002__create_solicitations.sql`, `V003__create_analyst_state_coverage.sql`, `V004__create_outbox_events.sql`, and `V005__create_audit_logs.sql`. Existing local databases that applied the former bootstrap migration must be recreated before use (`docker compose down -v`). After this initial restructuring, applied or shared migrations are immutable.
+Flyway owns the database schema. Hibernate uses `ddl-auto: validate` and does not modify it. The initial schema is split across `V001__create_users.sql`, `V002__create_solicitations.sql`, `V003__create_analyst_state_coverage.sql`, `V004__create_outbox_events.sql`, and `V005__create_audit_logs.sql`. The former single-file `V1__create_initial_schema.sql` was replaced by `V001`–`V003`; Flyway treats `V1` and `V001` as the same version, so databases that applied the old migration must be recreated. In local Compose, `docker compose down -v` removes both PostgreSQL and Elasticsearch data volumes. Applied or shared migrations from the restructured set onward are immutable.
 
-## Domain and workflow
+## Domain model
 
 A new solicitation starts with `status = DRAFT` and `currentStep = BASIC_DATA`.
 
 `currentStep` is derived from the completed step data rather than stored as a second mutable state. The persistence adapter carries the JPA version separately from the domain aggregate.
+
+The domain enforces required basic data, a complete address, valid confirmation details, accepted terms on submission, and valid workflow transitions.
+
+## Solicitation state machine
 
 ```text
 BASIC_DATA -> ADDRESS -> CONFIRMATION -> ready to submit
@@ -114,6 +115,10 @@ DRAFT -> SUBMITTED -> IN_REVIEW -> APPROVED
 ```
 
 Only drafts can be edited. Address details are resolved through ViaCEP from the submitted postal code. The preferred date cannot be in the past; high priority requires an estimated value of at least 100; terms must be accepted to submit.
+
+## Multi-step workflow
+
+Clients create a draft and complete basic data, address, and confirmation in order. Address fields are resolved from CEP; confirmation stores priority, preferred date, estimated value and terms acceptance. Once submitted, the solicitation is read-only.
 
 ## Solicitation API
 
@@ -141,17 +146,59 @@ Only drafts can be edited. Address details are resolved through ViaCEP from the 
 
 Health, API documentation, registration, and login endpoints are public. `POST /admin/users` requires the `ADMIN` role; other API routes require a valid JWT.
 
-## Search and consistency
+## Elasticsearch strategy
 
 Elasticsearch serves search queries only. Reads by solicitation ID and all business writes use PostgreSQL. Search results are eventually consistent, and analyst coverage is always intersected with the requested filters.
 
+## Transactional Outbox
+
 Solicitation changes and outbox events are committed in the same PostgreSQL transaction. A background processor updates Elasticsearch asynchronously and idempotently. If Elasticsearch is unavailable, the business transaction can still succeed and pending events are retried.
 
-## Audit and errors
+## Audit strategy
 
-An AOP interceptor writes audit records for solicitation creation, updates, submission, review start, and analyst decisions. Records identify the actor, action, aggregate, timestamp, and outcome without storing request bodies; failed operations are recorded, while reads are not audited. API errors use `{code, message, errors, timestamp}` across controller and security failures. Validation errors identify fields, and error codes are stable across malformed input, business validation, conflicts, authentication, and authorization.
+An AOP interceptor writes audit records for solicitation creation, updates, submission, review start, and analyst decisions. Records identify the actor, action, aggregate, timestamp, and outcome without storing request bodies; failed operations are recorded, while reads are not audited.
+
+## Error contract
+
+API errors use `{code, message, errors, timestamp}` across controller and security failures. Validation errors identify fields, and error codes are stable across malformed input, business validation, conflicts, authentication, and authorization.
 
 Expected HTTP mappings include `400` for malformed or structurally invalid input, `401` for unauthenticated requests, `403` for forbidden access, `404` for missing resources, `409` for state or concurrency conflicts, `422` for business validation and unknown postal codes, and `503` when ViaCEP is unavailable.
+
+## API documentation
+
+- Swagger UI: <http://localhost:8080/swagger-ui.html>
+- OpenAPI JSON: <http://localhost:8080/v3/api-docs>
+
+The specification groups endpoints by Auth, Solicitations, Analyst, and Admin. Protected operations advertise the JWT bearer scheme; API errors use the `ApiError` schema.
+
+## Observability
+
+Actuator exposes health, application info, and metrics. Health is public; metrics require authentication.
+
+| Metric | Type | Meaning |
+| --- | --- | --- |
+| `solicitation.created` | Counter | Successfully created solicitations |
+| `solicitation.submitted` | Counter | Successfully submitted solicitations |
+| `solicitation.approved` | Counter | Successfully approved solicitations |
+| `solicitation.rejected` | Counter | Successfully rejected solicitations |
+| `viacep.requests` | Counter | ViaCEP lookup attempts |
+| `viacep.failures` | Counter | ViaCEP integration failures |
+| `outbox.pending` | Gauge | Pending PostgreSQL outbox events |
+| `outbox.failures` | Counter | Failed outbox event processing attempts |
+
+Inspect available meter names at `/actuator/metrics`; query an individual meter at `/actuator/metrics/{name}` with an authenticated bearer token.
+
+## Assumptions
+
+- `termsAccepted = false` may be saved on a draft but prevents submission.
+- Analyst coverage is a set of state codes.
+- Money is represented as integer minor units plus an explicit currency (`BRL`); `BigDecimal` is reserved for boundary conversion. Calendar dates use `LocalDate`.
+
+## Trade-offs
+
+- A modular monolith keeps deployment and operations simple while preserving boundaries for future extraction.
+- The local Elasticsearch container runs without security for simpler development; Testcontainers uses the secured image configuration.
+- Cucumber is intentionally omitted. Gherkin documents expected behavior, while JUnit executes the retained unit tests.
 
 ## Roadmap
 
@@ -174,18 +221,10 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 12 | Transactional outbox and reliable search indexing | Complete |
 | 13 | AOP audit trail | Complete |
 | 14 | Consistent API error contract | Complete |
-| 15–17 | Acceptance tests and delivery | Pending |
+| 15–16 | End-to-end acceptance scenarios | Deferred |
+| 17 | OpenAPI, observability, and delivery documentation | Complete |
 
-## Assumptions and trade-offs
-
-- `termsAccepted = false` may be saved on a draft but prevents submission.
-- Analyst coverage is a set of state codes.
-- Money is represented as integer minor units plus an explicit currency (`BRL`); `BigDecimal` is reserved for boundary conversion. Calendar dates use `LocalDate`.
-- A modular monolith keeps deployment and operations simple while preserving boundaries for future extraction.
-- The local Elasticsearch container runs without security for simpler development; Testcontainers uses the secured image configuration.
-- Cucumber is intentionally omitted. Gherkin documents expected behavior, while JUnit executes the tests.
-
-## Production considerations
+## Production evolution
 
 - Replace the current HS256 signing key with managed key rotation or an external OAuth2/OIDC provider.
 - Enable Elasticsearch TLS and authentication in the local Compose environment.

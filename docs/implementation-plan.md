@@ -1539,7 +1539,7 @@ Scenario: Concurrent update
 
 ---
 
-# Fase 15 — BDD end-to-end completo
+# Fase 15 — BDD end-to-end completo — DEFERRED
 
 Aqui eu teria pelo menos **um cenário que conta a história inteira do sistema**.
 
@@ -1592,7 +1592,7 @@ Esse cenário sozinho valida quase toda a arquitetura.
 
 ---
 
-# Fase 16 — Cenários BDD negativos end-to-end
+# Fase 16 — Cenários BDD negativos end-to-end — DEFERRED
 
 Também faria um segundo grupo focado em segurança.
 
@@ -1624,7 +1624,7 @@ Esses testes dizem mais sobre qualidade do sistema do que 50 testes de getter.
 
 ---
 
-# Fase 17 — OpenAPI, observabilidade e entrega
+# Fase 17 — OpenAPI, observabilidade e entrega — COMPLETED
 
 ## OpenAPI
 

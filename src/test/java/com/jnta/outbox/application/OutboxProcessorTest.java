@@ -64,10 +64,12 @@ class OutboxProcessorTest {
                 .when(searchProjection)
                 .index(stored);
 
-        assertThat(outboxProcessor.processPendingBatch()).isZero();
+        assertThat(outboxProcessor.processPendingBatch())
+                .isEqualTo(new OutboxBatchResult(0, 1));
         verify(outboxEventRepository).recordFailure(event.id(), "IllegalStateException");
 
-        assertThat(outboxProcessor.processPendingBatch()).isEqualTo(1);
+        assertThat(outboxProcessor.processPendingBatch())
+                .isEqualTo(new OutboxBatchResult(1, 0));
         verify(outboxEventRepository).markProcessed(event.id(), CLOCK.instant());
         verify(searchProjection, times(2)).index(stored);
     }

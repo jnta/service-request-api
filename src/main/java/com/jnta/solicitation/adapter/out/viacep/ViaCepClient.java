@@ -6,8 +6,9 @@ import com.jnta.solicitation.application.exception.PostalCodeUnavailableExceptio
 import com.jnta.solicitation.application.port.out.PostalCodeGateway;
 import com.jnta.solicitation.application.port.out.PostalCodeResult;
 import com.jnta.solicitation.domain.address.Cep;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Locale;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -15,13 +16,21 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 @Component
-@RequiredArgsConstructor
 public class ViaCepClient implements PostalCodeGateway {
 
     private final RestClient viaCepRestClient;
+    private final Counter requests;
+    private final Counter failures;
+
+    public ViaCepClient(RestClient viaCepRestClient, MeterRegistry meterRegistry) {
+        this.viaCepRestClient = viaCepRestClient;
+        requests = meterRegistry.counter("viacep.requests");
+        failures = meterRegistry.counter("viacep.failures");
+    }
 
     @Override
     public PostalCodeResult find(Cep cep) {
+        requests.increment();
         ViaCepResponse response;
         try {
             response = viaCepRestClient.get()
@@ -32,12 +41,15 @@ public class ViaCepClient implements PostalCodeGateway {
             if (exception.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
                 throw new PostalCodeNotFoundException(cep);
             }
+            failures.increment();
             throw new PostalCodeUnavailableException("ViaCEP request failed", exception);
         } catch (RestClientException exception) {
+            failures.increment();
             throw new PostalCodeUnavailableException("ViaCEP is unavailable", exception);
         }
 
         if (response == null) {
+            failures.increment();
             throw new PostalCodeUnavailableException("ViaCEP returned an empty response");
         }
         if (Boolean.TRUE.equals(response.erro())) {
@@ -50,12 +62,14 @@ public class ViaCepClient implements PostalCodeGateway {
     private PostalCodeResult toPostalCodeResult(ViaCepResponse response) {
         if (isBlank(response.logradouro()) || isBlank(response.bairro())
                 || isBlank(response.localidade()) || isBlank(response.uf())) {
+            failures.increment();
             throw new PostalCodeUnavailableException("ViaCEP returned incomplete address data");
         }
         try {
             var state = BrazilianState.valueOf(response.uf().trim().toUpperCase(Locale.ROOT));
             return new PostalCodeResult(response.logradouro(), response.bairro(), response.localidade(), state);
         } catch (IllegalArgumentException exception) {
+            failures.increment();
             throw new PostalCodeUnavailableException("ViaCEP returned an unsupported state code", exception);
         }
     }

@@ -10,6 +10,11 @@ spring:
       maximum-pool-size: ${DB_POOL_SIZE:10}
       pool-name: solicitation-pool
 
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+    connection-timeout: 5s
+    socket-timeout: 30s
+
   jpa:
     open-in-view: false
     hibernate:
@@ -36,11 +41,6 @@ security:
     email: ${BOOTSTRAP_ADMIN_EMAIL:}
     password: ${BOOTSTRAP_ADMIN_PASSWORD:}
 
-  elasticsearch:
-    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
-    connection-timeout: 5s
-    socket-timeout: 30s
-
 integration:
   viacep:
     base-url: ${VIACEP_BASE_URL:https://viacep.com.br/ws}
@@ -61,7 +61,7 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
       probes:
         enabled: true
   info:
