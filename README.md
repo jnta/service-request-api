@@ -122,6 +122,7 @@ Only drafts can be edited. Address details are resolved through ViaCEP from the 
 - `PUT /solicitations/{id}/steps/basic-data` updates service type, title, and description for the owner of a draft.
 - `PUT /solicitations/{id}/steps/address` accepts CEP, number, and complement; street, neighborhood, city, and state are resolved by ViaCEP.
 - `PUT /solicitations/{id}/steps/confirmation` saves priority, preferred date, value and currency, and terms acceptance.
+- `POST /solicitations/{id}/submit` submits a complete solicitation with accepted terms.
 
 ## Authentication and authorization
 
@@ -164,7 +165,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 5 | Basic-data step | Complete |
 | 6 | Address step and ViaCEP integration | Complete |
 | 7 | Confirmation step and BRL `Money` validation | Complete |
-| 8–17 | Submission, analyst workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 8 | Complete solicitation submission | Complete |
+| 9–17 | Analyst authorization and workflow, search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 

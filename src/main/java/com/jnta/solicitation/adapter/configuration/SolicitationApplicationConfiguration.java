@@ -2,6 +2,7 @@ package com.jnta.solicitation.adapter.configuration;
 
 import com.jnta.solicitation.application.CreateSolicitationUseCase;
 import com.jnta.solicitation.application.GetSolicitationUseCase;
+import com.jnta.solicitation.application.SubmitSolicitationUseCase;
 import com.jnta.solicitation.application.UpdateAddressUseCase;
 import com.jnta.solicitation.application.UpdateBasicDataUseCase;
 import com.jnta.solicitation.application.UpdateConfirmationUseCase;
@@ -53,5 +54,13 @@ public class SolicitationApplicationConfiguration {
             SolicitationAccessPolicy accessPolicy,
             Clock clock) {
         return new UpdateConfirmationUseCase(repository, accessPolicy, clock);
+    }
+
+    @Bean
+    SubmitSolicitationUseCase submitSolicitationUseCase(
+            SolicitationRepository repository,
+            SolicitationAccessPolicy accessPolicy,
+            Clock clock) {
+        return new SubmitSolicitationUseCase(repository, accessPolicy, clock);
     }
 }

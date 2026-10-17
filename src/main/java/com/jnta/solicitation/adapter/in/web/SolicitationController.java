@@ -3,6 +3,7 @@ package com.jnta.solicitation.adapter.in.web;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.CreateSolicitationUseCase;
 import com.jnta.solicitation.application.GetSolicitationUseCase;
+import com.jnta.solicitation.application.SubmitSolicitationUseCase;
 import com.jnta.solicitation.application.UpdateAddressUseCase;
 import com.jnta.solicitation.application.UpdateBasicDataUseCase;
 import com.jnta.solicitation.application.UpdateConfirmationUseCase;
@@ -36,6 +37,7 @@ public class SolicitationController {
     private final UpdateAddressUseCase updateAddress;
     private final UpdateBasicDataUseCase updateBasicData;
     private final UpdateConfirmationUseCase updateConfirmation;
+    private final SubmitSolicitationUseCase submitSolicitation;
     private final SolicitationResponseMapper responseMapper;
     private final AddressRequestMapper addressRequestMapper;
     private final BasicDataRequestMapper basicDataRequestMapper;
@@ -74,6 +76,12 @@ public class SolicitationController {
             @AuthenticationPrincipal Jwt jwt) {
         UpdateConfirmationCommand command = confirmationRequestMapper.toCommand(request);
         var solicitation = updateConfirmation.update(new SolicitationId(id), requester(jwt), command);
+        return responseMapper.toResponse(solicitation);
+    }
+
+    @PostMapping("/{id}/submit")
+    public SolicitationResponse submit(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        var solicitation = submitSolicitation.submit(new SolicitationId(id), requester(jwt));
         return responseMapper.toResponse(solicitation);
     }
 

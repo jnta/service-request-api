@@ -382,6 +382,88 @@ class SolicitationApiIntegrationTest {
                 .andExpect(jsonPath("$.status").value("DRAFT"));
     }
 
+    @Test
+    @DisplayName("given a complete draft with accepted terms, when submitted, then it becomes read-only SUBMITTED")
+    void shouldSubmitCompleteSolicitation() throws Exception {
+        var client = registerAndLogin("submit@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeForSubmission(solicitationId, client.accessToken(), true);
+
+        mockMvc.perform(post("/solicitations/{id}/submit", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUBMITTED"));
+
+        mockMvc.perform(put("/solicitations/{id}/steps/basic-data", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType("application/json")
+                        .content(basicDataRequest("Changed title")))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("given an incomplete draft, when submitted, then all missing data is reported and status remains DRAFT")
+    void shouldRejectIncompleteSubmission() throws Exception {
+        var client = registerAndLogin("incomplete-submit@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeBasicData(solicitationId, client.accessToken());
+
+        mockMvc.perform(post("/solicitations/{id}/submit", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isUnprocessableEntity());
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DRAFT"));
+    }
+
+    @Test
+    @DisplayName("given a complete draft without accepted terms, when submitted, then submission is rejected")
+    void shouldRejectSubmissionWithoutAcceptedTerms() throws Exception {
+        var client = registerAndLogin("unaccepted-terms@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeForSubmission(solicitationId, client.accessToken(), false);
+
+        mockMvc.perform(post("/solicitations/{id}/submit", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isUnprocessableEntity());
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DRAFT"));
+    }
+
+    @Test
+    @DisplayName("given a submitted solicitation, when the owner submits it again, then a conflict is returned")
+    void shouldRejectSubmittingTwice() throws Exception {
+        var client = registerAndLogin("submit-twice@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+        completeForSubmission(solicitationId, client.accessToken(), true);
+
+        mockMvc.perform(post("/solicitations/{id}/submit", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/solicitations/{id}/submit", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("given a complete solicitation owned by another client, when submitted, then access is denied")
+    void shouldDenySubmissionByAnotherClient() throws Exception {
+        var owner = registerAndLogin("submit-owner@example.com");
+        var otherClient = registerAndLogin("submit-other@example.com");
+        var solicitationId = createSolicitation(owner.accessToken());
+        completeForSubmission(solicitationId, owner.accessToken(), true);
+
+        mockMvc.perform(post("/solicitations/{id}/submit", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(otherClient.accessToken())))
+                .andExpect(status().isForbidden());
+    }
+
     private TestIdentity registerAndLogin(String email) throws Exception {
         MvcResult registration = mockMvc.perform(post("/auth/register")
                         .contentType("application/json")
@@ -449,6 +531,16 @@ class SolicitationApiIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
                         .contentType("application/json")
                         .content(addressRequest("70040902", "123", null)))
+                .andExpect(status().isOk());
+    }
+
+    private void completeForSubmission(String solicitationId, String accessToken, boolean termsAccepted) throws Exception {
+        completeBasicData(solicitationId, accessToken);
+        completeAddress(solicitationId, accessToken);
+        mockMvc.perform(put("/solicitations/{id}/steps/confirmation", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
+                        .contentType("application/json")
+                        .content(confirmationRequest("HIGH", "2100-01-01", "350.00", "BRL", termsAccepted)))
                 .andExpect(status().isOk());
     }
 
