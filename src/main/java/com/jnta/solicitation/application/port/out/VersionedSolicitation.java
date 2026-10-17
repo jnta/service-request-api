@@ -18,4 +18,8 @@ public record VersionedSolicitation(Solicitation solicitation, OptionalLong vers
     public static VersionedSolicitation persisted(Solicitation solicitation, long version) {
         return new VersionedSolicitation(solicitation, OptionalLong.of(version));
     }
+
+    public VersionedSolicitation withSolicitation(Solicitation updated) {
+        return new VersionedSolicitation(updated, version);
+    }
 }

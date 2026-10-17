@@ -3,12 +3,28 @@ package com.jnta.solicitation.adapter.in.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
 import com.jnta.TestcontainersConfiguration;
+import com.jnta.shared.geography.BrazilianState;
+import com.jnta.solicitation.application.port.out.SolicitationRepository;
+import com.jnta.solicitation.domain.SolicitationId;
+import com.jnta.solicitation.domain.address.Address;
+import com.jnta.solicitation.domain.address.Cep;
+import com.jnta.solicitation.domain.basicdata.BasicData;
+import com.jnta.solicitation.domain.basicdata.ServiceType;
+import com.jnta.solicitation.domain.basicdata.BasicData;
+import com.jnta.solicitation.domain.basicdata.ServiceType;
+import com.jnta.solicitation.domain.confirmation.Confirmation;
+import com.jnta.solicitation.domain.money.Currency;
+import com.jnta.solicitation.domain.money.Money;
+import com.jnta.solicitation.domain.confirmation.Priority;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +61,12 @@ class SolicitationApiIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private SolicitationRepository solicitationRepository;
+
+    @Autowired
+    private Clock clock;
 
     @BeforeEach
     void clearData() {
@@ -103,6 +125,74 @@ class SolicitationApiIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("given the owner has a DRAFT, when valid basic data is submitted, then it is saved and the step advances")
+    void shouldUpdateBasicDataForOwner() throws Exception {
+        var client = registerAndLogin("basic-data@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+
+        mockMvc.perform(put("/solicitations/{id}/steps/basic-data", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType("application/json")
+                        .content(basicDataRequest("Equipment installation")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.basicData.title").value("Equipment installation"))
+                .andExpect(jsonPath("$.currentStep").value("ADDRESS"));
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.basicData.serviceType").value("INSTALLATION"))
+                .andExpect(jsonPath("$.currentStep").value("ADDRESS"));
+    }
+
+    @Test
+    @DisplayName("given the owner has a DRAFT, when a short title is submitted, then validation fails and the step does not advance")
+    void shouldRejectShortTitleWithoutChangingDraft() throws Exception {
+        var client = registerAndLogin("invalid-basic-data@example.com");
+        var solicitationId = createSolicitation(client.accessToken());
+
+        mockMvc.perform(put("/solicitations/{id}/steps/basic-data", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType("application/json")
+                        .content(basicDataRequest("AB")))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentStep").value("BASIC_DATA"))
+                .andExpect(jsonPath("$.basicData").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    @DisplayName("given another client's DRAFT, when basic data is updated, then access is denied")
+    void shouldDenyBasicDataUpdateByAnotherClient() throws Exception {
+        var owner = registerAndLogin("basic-owner@example.com");
+        var otherClient = registerAndLogin("basic-other@example.com");
+        var solicitationId = createSolicitation(owner.accessToken());
+
+        mockMvc.perform(put("/solicitations/{id}/steps/basic-data", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(otherClient.accessToken()))
+                        .contentType("application/json")
+                        .content(basicDataRequest("Equipment installation")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("given an owned SUBMITTED solicitation, when basic data is updated, then a business conflict is returned")
+    void shouldRejectBasicDataUpdateAfterSubmission() throws Exception {
+        var owner = registerAndLogin("submitted-owner@example.com");
+        var solicitationId = createSolicitation(owner.accessToken());
+        submitSolicitation(UUID.fromString(solicitationId), owner.userId());
+
+        mockMvc.perform(put("/solicitations/{id}/steps/basic-data", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(owner.accessToken()))
+                        .contentType("application/json")
+                        .content(basicDataRequest("Changed title")))
+                .andExpect(status().isConflict());
+    }
+
     private TestIdentity registerAndLogin(String email) throws Exception {
         MvcResult registration = mockMvc.perform(post("/auth/register")
                         .contentType("application/json")
@@ -132,6 +222,26 @@ class SolicitationApiIntegrationTest {
         String location = result.getResponse().getHeader(HttpHeaders.LOCATION);
         assertThat(location).isNotBlank();
         return JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+    }
+
+    private void submitSolicitation(UUID solicitationId, String ownerId) {
+        var stored = solicitationRepository.findById(new SolicitationId(solicitationId)).orElseThrow();
+        var solicitation = stored.solicitation();
+        solicitation.updateBasicData(new BasicData(
+                new ServiceType("INSTALLATION"), "Original title", "Install equipment at the main office."));
+        solicitation.updateAddress(new Address(
+                new Cep("70040-902"), "Main Street", "Central", "Brasilia", BrazilianState.DF, "123", null));
+        solicitation.updateConfirmation(
+                new Confirmation(Priority.LOW, LocalDate.now(clock), new Money(0, Currency.BRL), true), clock);
+        solicitation.submit(clock);
+        solicitationRepository.save(stored.withSolicitation(solicitation));
+        assertThat(solicitation.owner().value().toString()).isEqualTo(ownerId);
+    }
+
+    private static String basicDataRequest(String title) {
+        return """
+                {"serviceType":"INSTALLATION","title":"%s","description":"Install equipment at the main office."}
+                """.formatted(title);
     }
 
     private static String bearer(String token) {

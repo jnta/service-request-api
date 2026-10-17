@@ -783,7 +783,7 @@ Scenario: Unknown solicitation
 
 ---
 
-# Fase 5 — Step 1: Dados básicos
+# Fase 5 — Step 1: Dados básicos — COMPLETED
 
 Aqui eu prefiro uma fase por etapa inicialmente. Facilita bastante verificar comportamento.
 

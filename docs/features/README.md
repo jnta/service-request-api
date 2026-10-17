@@ -35,4 +35,4 @@ Testcontainers (PostgreSQL + Elasticsearch), WireMock (ViaCEP) and REST Assured/
 | `solicitation-domain.feature` | 1 | Solicitation invariants and workflow |
 | `solicitation-persistence.feature` | 2 | PostgreSQL round-trip and optimistic locking |
 | `authentication.feature` | 3 | User registration, JWT authentication, roles, and analyst coverage |
-| `solicitation-api.feature` | 4 | Authenticated creation, ownership, and retrieval |
+| `solicitation-api.feature` | 4–5 | Authenticated creation, ownership, retrieval, and basic-data update |

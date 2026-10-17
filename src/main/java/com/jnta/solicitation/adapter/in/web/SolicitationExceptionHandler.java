@@ -1,7 +1,11 @@
 package com.jnta.solicitation.adapter.in.web;
 
 import com.jnta.solicitation.application.exception.SolicitationAccessDeniedException;
+import com.jnta.solicitation.application.exception.ConcurrentSolicitationModificationException;
 import com.jnta.solicitation.application.exception.SolicitationNotFoundException;
+import com.jnta.solicitation.domain.exception.IncompleteSolicitationException;
+import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
+import com.jnta.solicitation.domain.exception.InvalidSolicitationStateException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +23,21 @@ public class SolicitationExceptionHandler {
     @ExceptionHandler(SolicitationAccessDeniedException.class)
     ResponseEntity<ProblemDetail> handleAccessDenied() {
         return problem(HttpStatus.FORBIDDEN, "Access to this solicitation is forbidden");
+    }
+
+    @ExceptionHandler({InvalidSolicitationStateException.class, ConcurrentSolicitationModificationException.class})
+    ResponseEntity<ProblemDetail> handleConflict(RuntimeException exception) {
+        return problem(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(IncompleteSolicitationException.class)
+    ResponseEntity<ProblemDetail> handleIncomplete(IncompleteSolicitationException exception) {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidSolicitationDataException.class)
+    ResponseEntity<ProblemDetail> handleInvalidData(InvalidSolicitationDataException exception) {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
     }
 
     private static ResponseEntity<ProblemDetail> problem(HttpStatus status, String detail) {

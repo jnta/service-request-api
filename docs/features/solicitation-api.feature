@@ -22,3 +22,25 @@ Feature: Solicitation ownership
     Given an authenticated client
     When a non-existing solicitation is requested
     Then the API should return 404
+
+  Scenario: Owner completes basic data
+    Given the client owns a DRAFT solicitation
+    When valid basic data is submitted
+    Then the basic data should be persisted
+    And currentStep should become ADDRESS
+
+  Scenario: Rejecting short title
+    Given the client owns a DRAFT solicitation
+    When a title shorter than 3 characters is submitted
+    Then the API should return a validation error
+    And currentStep should remain BASIC_DATA
+
+  Scenario: Rejecting modification by another client
+    Given client A owns a solicitation
+    When client B tries to update its basic data
+    Then access should be denied
+
+  Scenario: Rejecting modification after submission
+    Given a solicitation is SUBMITTED
+    When its owner attempts to change basic data
+    Then the API should return a business conflict

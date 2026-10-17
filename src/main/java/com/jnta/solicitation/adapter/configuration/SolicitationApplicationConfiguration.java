@@ -2,7 +2,9 @@ package com.jnta.solicitation.adapter.configuration;
 
 import com.jnta.solicitation.application.CreateSolicitationUseCase;
 import com.jnta.solicitation.application.GetSolicitationUseCase;
+import com.jnta.solicitation.application.UpdateBasicDataUseCase;
 import com.jnta.solicitation.application.port.out.SolicitationRepository;
+import com.jnta.solicitation.application.policy.SolicitationAccessPolicy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,7 +17,21 @@ public class SolicitationApplicationConfiguration {
     }
 
     @Bean
-    GetSolicitationUseCase getSolicitationUseCase(SolicitationRepository repository) {
-        return new GetSolicitationUseCase(repository);
+    SolicitationAccessPolicy solicitationAccessPolicy() {
+        return new SolicitationAccessPolicy();
+    }
+
+    @Bean
+    GetSolicitationUseCase getSolicitationUseCase(
+            SolicitationRepository repository,
+            SolicitationAccessPolicy accessPolicy) {
+        return new GetSolicitationUseCase(repository, accessPolicy);
+    }
+
+    @Bean
+    UpdateBasicDataUseCase updateBasicDataUseCase(
+            SolicitationRepository repository,
+            SolicitationAccessPolicy accessPolicy) {
+        return new UpdateBasicDataUseCase(repository, accessPolicy);
     }
 }
