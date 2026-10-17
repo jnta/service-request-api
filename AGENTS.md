@@ -20,7 +20,7 @@ docker compose up --build               # full stack
 
 ## Architectural constraints
 
-1. No dual writes: persist outbox events in the same transaction as domain changes. Never index into Elasticsearch inside that transaction.
+1. Never index into Elasticsearch inside a PostgreSQL transaction. Phase 11 temporarily updates the projection directly after persistence; phase 12 must replace this with an outbox event committed in the same transaction as the domain change.
 2. PostgreSQL is the source of truth; Elasticsearch is a rebuildable projection.
 3. Domain code must not depend on Spring, JPA, Jackson, or HTTP.
 4. Inject `Clock` wherever domain behavior depends on time. Never read the system clock directly.

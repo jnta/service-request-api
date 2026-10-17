@@ -1203,7 +1203,7 @@ Esse é um excelente teste para `@Version`.
 
 ---
 
-# Fase 11 — Elasticsearch Search Model
+# Fase 11 — Elasticsearch Search Model — COMPLETED
 
 Agora sim Elasticsearch.
 

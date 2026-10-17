@@ -22,6 +22,8 @@ final class SolicitationJpaMapper {
         entity.clientId = solicitation.owner().value();
         entity.status = solicitation.status();
         entity.version = entry.version().isPresent() ? entry.version().getAsLong() : null;
+        entity.createdAt = entry.createdAt().orElse(null);
+        entity.updatedAt = entry.updatedAt().orElse(null);
 
         var basicData = solicitation.basicData();
         if (basicData != null) {
@@ -79,6 +81,7 @@ final class SolicitationJpaMapper {
                 address,
                 confirmation,
                 decision);
-        return VersionedSolicitation.persisted(solicitation, entity.version);
+        return VersionedSolicitation.persisted(
+                solicitation, entity.version, entity.createdAt, entity.updatedAt);
     }
 }

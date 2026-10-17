@@ -124,6 +124,7 @@ Only drafts can be edited. Address details are resolved through ViaCEP from the 
 - `PUT /solicitations/{id}/steps/confirmation` saves priority, preferred date, value and currency, and terms acceptance.
 - `POST /solicitations/{id}/submit` submits a complete solicitation with accepted terms.
 - `POST /analyst/solicitations/{id}/start` starts review; `POST /analyst/solicitations/{id}/decide` records an approval or rejection.
+- `GET /analyst/solicitations/search` filters and paginates the Elasticsearch projection.
 
 ## Authentication and authorization
 
@@ -144,7 +145,7 @@ Health, API documentation, registration, and login endpoints are public. `POST /
 
 Elasticsearch serves search queries only. Reads by solicitation ID and all business writes use PostgreSQL. Search results are eventually consistent, and analyst coverage is always intersected with the requested filters.
 
-The transactional outbox records domain changes in PostgreSQL in the same transaction. A processor updates Elasticsearch asynchronously and idempotently. If Elasticsearch is unavailable, the business transaction can still succeed and pending events can be retried.
+The current search phase updates Elasticsearch directly after persistence as an intermediate step. This leaves a failure window where PostgreSQL commits but search indexing fails. Phase 12 replaces it with a transactional outbox and asynchronous, idempotent indexing so Elasticsearch outages do not fail business writes.
 
 ## Audit and errors
 
@@ -169,7 +170,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 8 | Complete solicitation submission | Complete |
 | 9 | Analyst geographic authorization | Complete |
 | 10 | Analyst review workflow | Complete |
-| 11–17 | Search, outbox, audit, API contract, acceptance tests, and delivery | Pending |
+| 11 | Elasticsearch search projection and coverage-filtered pagination | Complete |
+| 12–17 | Transactional outbox, audit, API contract, acceptance tests, and delivery | Pending |
 
 ## Assumptions and trade-offs
 

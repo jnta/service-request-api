@@ -10,7 +10,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-@Repository
+@Repository("jpaSolicitationRepositoryAdapter")
 @RequiredArgsConstructor
 public class JpaSolicitationRepositoryAdapter implements SolicitationRepository {
 

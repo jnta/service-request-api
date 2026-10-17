@@ -16,6 +16,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import com.jnta.TestcontainersConfiguration;
 import com.jnta.shared.geography.BrazilianState;
 import com.jnta.solicitation.application.port.out.SolicitationRepository;
+import com.jnta.solicitation.application.port.out.SolicitationSearchProjection;
 import com.jnta.solicitation.domain.SolicitationId;
 import com.jnta.solicitation.domain.address.Address;
 import com.jnta.solicitation.domain.address.Cep;
@@ -35,8 +36,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -54,6 +59,7 @@ import org.testcontainers.utility.DockerImageName;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@Import(SolicitationApiIntegrationTest.SearchProjectionTestConfiguration.class)
 class SolicitationApiIntegrationTest {
 
     private static final String PASSWORD = "client-password-123";
@@ -764,6 +770,17 @@ class SolicitationApiIntegrationTest {
 
     private static String bearer(String token) {
         return "Bearer " + token;
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class SearchProjectionTestConfiguration {
+
+        @Bean
+        @Primary
+        SolicitationSearchProjection searchProjection() {
+            return solicitation -> {
+            };
+        }
     }
 
     private record TestIdentity(String userId, String accessToken) {
