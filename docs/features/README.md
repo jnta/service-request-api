@@ -43,3 +43,4 @@ Integration and end-to-end scenarios are deferred to phases 15–16 and will be 
 | `solicitation-search.feature` | 11 | Elasticsearch filters, pagination, and coverage enforcement |
 | `transactional-outbox.feature` | 12 | Atomic event persistence, retries, and idempotent indexing |
 | `audit-trail.feature` | 13 | AOP audit records, success outcomes, and read exclusion |
+| `api-error-contract.feature` | 14 | Stable error format, status mappings, and field validation details |

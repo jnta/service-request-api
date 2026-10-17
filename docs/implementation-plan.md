@@ -1469,7 +1469,7 @@ Scenario: Read operations are not audited
 
 ---
 
-# Fase 14 — Error contract
+# Fase 14 — Error contract — COMPLETED
 
 ## Objetivo
 

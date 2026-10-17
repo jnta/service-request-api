@@ -149,9 +149,9 @@ Solicitation changes and outbox events are committed in the same PostgreSQL tran
 
 ## Audit and errors
 
-An AOP interceptor writes audit records for solicitation creation, updates, submission, review start, and analyst decisions. Records identify the actor, action, aggregate, timestamp, and outcome without storing request bodies; failed operations are recorded, while reads are not audited. API errors use a consistent response shape with a stable error code, message, field errors where applicable, and timestamp.
+An AOP interceptor writes audit records for solicitation creation, updates, submission, review start, and analyst decisions. Records identify the actor, action, aggregate, timestamp, and outcome without storing request bodies; failed operations are recorded, while reads are not audited. API errors use `{code, message, errors, timestamp}` across controller and security failures. Validation errors identify fields, and error codes are stable across malformed input, business validation, conflicts, authentication, and authorization.
 
-Expected HTTP mappings include `400` for malformed input, `401` for unauthenticated requests, `403` for forbidden access, `404` for missing resources, `409` for state or concurrency conflicts, `422` for business validation, and `502`/`503` for ViaCEP failures.
+Expected HTTP mappings include `400` for malformed or structurally invalid input, `401` for unauthenticated requests, `403` for forbidden access, `404` for missing resources, `409` for state or concurrency conflicts, `422` for business validation and unknown postal codes, and `503` when ViaCEP is unavailable.
 
 ## Roadmap
 
@@ -173,7 +173,8 @@ See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full ph
 | 11 | Elasticsearch search projection and coverage-filtered pagination | Complete |
 | 12 | Transactional outbox and reliable search indexing | Complete |
 | 13 | AOP audit trail | Complete |
-| 14–17 | API contract, acceptance tests, and delivery | Pending |
+| 14 | Consistent API error contract | Complete |
+| 15–17 | Acceptance tests and delivery | Pending |
 
 ## Assumptions and trade-offs
 
