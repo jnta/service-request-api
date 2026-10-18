@@ -2,75 +2,145 @@
 
 An API for service requests with a multi-step workflow, geographic analyst authorization, Elasticsearch search, a transactional outbox, and an audit trail.
 
-## Challenge overview
+## Quick start (Docker Compose)
 
-Clients create a request and complete it in three steps: basic data, address, and confirmation. Once submitted, a request becomes read-only and enters the analyst queue. Analysts can access requests only in the states covered by their assigned regions, then start a review and approve or reject the request.
-
-## How to run
+This is the recommended way to run the application. Docker builds the Java application, so a local JDK, Gradle, and `mise` are **not required** for this setup.
 
 ### Requirements
 
-- Docker and Docker Compose
-- JDK 21 for local development. The project pins Java 21 in [`.mise.toml`](.mise.toml); run `mise install` when using mise.
+- Docker Engine or Docker Desktop with the Docker Compose v2 plugin, running and accessible to your user
+- Free host ports `8080`, `5432`, and `9200`
+- Enough memory assigned to Docker to run Elasticsearch and the API
+- Internet access on the first run to download container images and Gradle dependencies
+- `curl` for the health check below (or open the health URL in a browser)
 
-### Start the full stack
-
-```bash
-docker compose up --build
-```
-
-Compose starts PostgreSQL, Elasticsearch, and the application. The application waits for both dependencies to become healthy. Flyway applies pending migrations at startup.
-
-Compose enables a local-only administrator bootstrap using `admin@example.com` and `local-admin-password-123`, and a local-only JWT signing key. Override `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`, and `JWT_SECRET_BASE64` for your own development environment. Never use the Compose defaults outside local development.
-
-Check application health:
+Start PostgreSQL, Elasticsearch, and the application:
 
 ```bash
-curl localhost:8080/actuator/health
+docker compose up --build -d
 ```
 
-The API documentation is available at the URLs listed in [API documentation](#api-documentation).
+The first build can take a few minutes. Wait until all three services show `healthy`:
 
-Stop the services and remove their data volumes:
+```bash
+docker compose ps
+```
+
+Verify the application:
+
+```bash
+curl --fail http://localhost:8080/actuator/health
+```
+
+The expected response is `{"status":"UP"}`. Compose waits for PostgreSQL and Elasticsearch health checks before starting the application, and Flyway applies pending database migrations automatically.
+
+On Windows PowerShell, open the health URL in a browser or run the command as `curl.exe --fail http://localhost:8080/actuator/health`.
+
+### Local URLs and credentials
+
+These credentials and the JWT signing key are for local development only. Never use the Compose defaults outside a local environment.
+
+| Service | Address | Local credentials |
+| --- | --- | --- |
+| API | <http://localhost:8080> | — |
+| Swagger UI | <http://localhost:8080/swagger-ui.html> | — |
+| OpenAPI JSON | <http://localhost:8080/v3/api-docs> | — |
+| PostgreSQL / DBeaver | `localhost:5432` | Database `solicitations`, user `solicitations`, password `solicitations` |
+| Elasticsearch | <http://localhost:9200> | No authentication in local Compose |
+| Bootstrap administrator | `POST /auth/login` | `admin@example.com` / `local-admin-password-123` |
+
+When connecting from DBeaver on the host, use `localhost`, not the Docker service name `postgres`. The service name is only resolvable by containers on the Compose network.
+
+Quickly verify administrator login:
+
+```bash
+curl --fail --silent --show-error \
+  --request POST http://localhost:8080/auth/login \
+  --header 'Content-Type: application/json' \
+  --data '{"email":"admin@example.com","password":"local-admin-password-123"}'
+```
+
+The response contains an access token. Compose defaults can be overridden with `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`, and `JWT_SECRET_BASE64` environment variables. Bootstrap creates the configured administrator if it does not already exist; changing these variables does not change the password of an existing account. Keep custom values local and do not commit them.
+
+The login command above uses Bash syntax. On Windows, run it from WSL/Git Bash or use the Bruno collection below.
+
+### Stop or reset the local stack
+
+Stop containers while **keeping** the database and search data:
+
+```bash
+docker compose down
+```
+
+To intentionally delete all local PostgreSQL and Elasticsearch data and start fresh:
 
 ```bash
 docker compose down -v
 ```
 
-The current user must be able to access Docker. If needed, add the user to the `docker` group and start a new login session.
+> **Warning:** `down -v` permanently deletes the local database and search volumes, including users and solicitations. Do not use it if you need to preserve local data.
 
-### Run the application outside Docker
+## Local development (run the application outside Docker)
+
+This path requires JDK 21. The Gradle Wrapper downloads and runs the pinned Gradle version; installing Gradle separately is unnecessary. Java 21 is pinned in [`.mise.toml`](.mise.toml); `mise install` is optional if you use mise to manage Java. The example below uses Bash and OpenSSL to generate the local JWT key.
+
+Start only the infrastructure containers:
 
 ```bash
 docker compose up -d postgres elasticsearch
+docker compose ps
+```
+
+Wait until both infrastructure services show `healthy`. Then, from the repository root, configure a local JWT key and bootstrap administrator and run the application:
+
+```bash
 export JWT_SECRET_BASE64="$(openssl rand -base64 32)"
 export BOOTSTRAP_ADMIN_ENABLED=true
 export BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 export BOOTSTRAP_ADMIN_PASSWORD='replace-with-a-local-password'
-mise exec -- ./gradlew bootRun
+./gradlew bootRun
 ```
 
-## How to test
+If Java 21 is managed with mise, run `mise install` once and replace the last command with `mise exec -- ./gradlew bootRun`. This setup uses the default local PostgreSQL and Elasticsearch addresses from `application.yml`.
+
+On Windows PowerShell, use this equivalent after starting the infrastructure services:
+
+```powershell
+$env:JWT_SECRET_BASE64 = (openssl rand -base64 32)
+$env:BOOTSTRAP_ADMIN_ENABLED = "true"
+$env:BOOTSTRAP_ADMIN_EMAIL = "admin@example.com"
+$env:BOOTSTRAP_ADMIN_PASSWORD = "replace-with-a-local-password"
+.\gradlew.bat bootRun
+```
+
+This local-development example uses OpenSSL to generate a JWT key. The recommended Compose quick start does not require OpenSSL.
+
+## Tests
+
+Requirements: JDK 21 and a running Docker Engine that the current user can access. The test suite uses Testcontainers to start its own PostgreSQL and Elasticsearch containers, so you do **not** need to start the Compose application first. The first test run may download Gradle dependencies and container images.
 
 ```bash
-mise exec -- ./gradlew test
+./gradlew test
 ```
 
-The suite includes domain and application unit tests plus acceptance tests for the complete solicitation lifecycle and its main security safeguards. The acceptance suite uses Testcontainers for PostgreSQL and Elasticsearch, WireMock for ViaCEP, and MockMvc.
+On Windows PowerShell, use `.\gradlew.bat test` instead. The suite includes domain and application unit tests plus acceptance tests for the solicitation lifecycle and security safeguards. Acceptance tests use Testcontainers, WireMock for ViaCEP, and MockMvc. Docker client/provider errors indicate a Docker setup issue, not an application test failure. If you use mise to manage Java, run `mise install` and then `mise exec -- ./gradlew test`.
 
-Acceptance tests require Docker access. BDD scenarios are documented in [`docs/features/`](docs/features/) and implemented with JUnit; Cucumber is not used.
+BDD scenarios are documented in [`docs/features/`](docs/features/) and implemented with JUnit; Cucumber is not used.
 
+## Optional HTTP acceptance tests (Bruno)
 
-### HTTP acceptance with Bruno
-
-The [Bruno collection](bruno/README.md) automates round 1 happy paths and round 2 negative/security scenarios against a running API. Open `bruno/` in Bruno, select `Local`, and run the entire collection sequentially, or use the pinned CLI:
+The [Bruno collection guide](bruno/README.md) covers prerequisites, execution, and data retention. It runs against a started API and checks the happy paths and negative/security scenarios. It requires Node.js, outbound access to ViaCEP for address requests, and a reachable Compose administrator. Run the collection sequentially:
 
 ```bash
 cd bruno
 npx --yes @usebruno/cli@4.2.1 run --env Local --sandbox developer
 ```
 
-It creates unique clients, analysts and requests per run, uses the documented local Compose administrator, and retains generated records. Configure the environment for customized credentials and ViaCEP/state fixtures. See its [scenario matrix](bruno/SCENARIOS.md) and [execution results](bruno/RESULTS.md) for coverage, prerequisites and known failures. Reports can contain credentials and tokens and are ignored by Git. HTTP checks complement the existing Java/Testcontainers suite; they do not inspect internal audit/outbox persistence or simulate infrastructure outages.
+The collection creates unique clients, analysts, and solicitations and retains them between runs. Reports can contain credentials and tokens; they are ignored by Git and should not be shared. HTTP checks complement the Java/Testcontainers suite; they do not inspect internal audit/outbox persistence or simulate infrastructure outages. See the [scenario matrix](bruno/SCENARIOS.md) and [execution results](bruno/RESULTS.md).
+
+## What the application does
+
+Clients create a request and complete it in three steps: basic data, address, and confirmation. Once submitted, a request becomes read-only and enters the analyst queue. Analysts can access requests only in the states covered by their assigned regions, then start a review and approve or reject the request.
 
 ## Architecture
 
