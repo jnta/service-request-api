@@ -26,3 +26,8 @@ Feature: Solicitation search
     Given the analyst covers DF and GO
     When the analyst requests DF
     Then only DF results should be returned
+
+  Scenario: Concurrent searches initialize the search index once
+    Given the Elasticsearch search index does not exist
+    When multiple searches start concurrently
+    Then all searches should complete without an index creation conflict

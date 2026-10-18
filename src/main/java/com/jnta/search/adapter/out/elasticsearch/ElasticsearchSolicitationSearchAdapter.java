@@ -1,5 +1,7 @@
 package com.jnta.search.adapter.out.elasticsearch;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.HealthStatus;
 import com.jnta.search.application.SolicitationSearchCriteria;
 import com.jnta.search.application.SolicitationSearchPage;
 import com.jnta.search.application.SolicitationSearchResult;
@@ -12,6 +14,8 @@ import com.jnta.solicitation.domain.basicdata.BasicData;
 import com.jnta.solicitation.domain.confirmation.Confirmation;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -25,7 +29,11 @@ import org.springframework.stereotype.Repository;
 public class ElasticsearchSolicitationSearchAdapter
         implements SolicitationSearchProjection, SolicitationSearchRepository {
 
+    private static final String INDEX_READY_TIMEOUT = "5s";
+
     private final ElasticsearchOperations operations;
+    private final ElasticsearchClient client;
+    private boolean indexReady;
 
     @Override
     public void index(VersionedSolicitation entry) {
@@ -48,11 +56,33 @@ public class ElasticsearchSolicitationSearchAdapter
         return new SolicitationSearchPage(items, hits.getTotalHits(), criteria.page(), criteria.size());
     }
 
-    private void ensureIndex() {
+    private synchronized void ensureIndex() {
         var index = operations.indexOps(SolicitationSearchDocument.class);
-        if (!index.exists()) {
-            index.createWithMapping();
+        boolean exists = index.exists();
+        if (indexReady && exists) {
+            return;
         }
+        if (!exists) {
+            try {
+                index.createWithMapping();
+            } catch (DataAccessException exception) {
+                if (!index.exists()) {
+                    throw exception;
+                }
+            }
+        }
+        try {
+            var health = client.cluster().health(request -> request
+                    .index(index.getIndexCoordinates().getIndexName())
+                    .waitForStatus(HealthStatus.Yellow)
+                    .timeout(timeout -> timeout.time(INDEX_READY_TIMEOUT)));
+            if (health.timedOut() || health.status() == HealthStatus.Red) {
+                throw new DataAccessResourceFailureException("Elasticsearch search index is not ready");
+            }
+        } catch (java.io.IOException exception) {
+            throw new DataAccessResourceFailureException("Failed to check Elasticsearch search index health", exception);
+        }
+        indexReady = true;
     }
 
     private Criteria toCriteria(SolicitationSearchCriteria filters) {

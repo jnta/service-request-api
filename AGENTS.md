@@ -90,7 +90,6 @@ Do not create `package-info.java` or ADRs for implementation details.
 
 ## Workflow
 
-- Work on one phase at a time, following [`docs/implementation-plan.md`](docs/implementation-plan.md).
 - Do not reformat or reorder code outside the task scope.
 - Do not commit or push unless explicitly requested.
 - Done means implementation, tests, a BDD scenario, no regressions, and README/ADR updates when architecture changes.

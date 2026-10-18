@@ -5,6 +5,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,13 +16,22 @@ import com.jayway.jsonpath.JsonPath;
 import com.jnta.TestcontainersConfiguration;
 import com.jnta.outbox.application.OutboxProcessor;
 import com.jnta.search.adapter.out.elasticsearch.SolicitationSearchDocument;
+import com.jnta.search.application.SearchSortDirection;
+import com.jnta.search.application.SearchSortField;
+import com.jnta.search.application.SolicitationSearchCriteria;
+import com.jnta.search.application.port.out.SolicitationSearchRepository;
+import com.jnta.shared.geography.BrazilianState;
+import com.jnta.solicitation.domain.workflow.SolicitationStatus;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -94,6 +104,9 @@ class SolicitationLifecycleAcceptanceTest {
 
     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
+
+    @Autowired
+    private SolicitationSearchRepository solicitationSearchRepository;
 
     @DynamicPropertySource
     static void viaCepProperties(DynamicPropertyRegistry registry) {
@@ -186,6 +199,19 @@ class SolicitationLifecycleAcceptanceTest {
     }
 
     @Test
+    @DisplayName("given an invalid bearer token, when a protected endpoint is requested, then the common unauthorized error is returned")
+    void shouldReturnApiErrorEnvelopeForInvalidBearerToken() throws Exception {
+        mockMvc.perform(get("/solicitations/{id}", UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, bearer("invalid-token")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.errors").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+    }
+
+    @Test
     @DisplayName("given an analyst covering DF and a solicitation in SP, when the analyst reads it, then access is denied")
     void shouldDenyAnalystReadingSolicitationOutsideCoverage() throws Exception {
         var submitted = createSubmittedSolicitation("01001000", "SP");
@@ -208,6 +234,38 @@ class SolicitationLifecycleAcceptanceTest {
                         .param("state", "SP"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    @DisplayName("given the search index does not exist, when searches run concurrently, then all searches complete")
+    void shouldCreateSearchIndexWhenSearchesRunConcurrently() throws Exception {
+        var criteria = new SolicitationSearchCriteria(
+                SolicitationStatus.SUBMITTED,
+                "INSTALLATION",
+                null,
+                Set.of(BrazilianState.SP),
+                null,
+                null,
+                0,
+                100,
+                SearchSortField.CREATED_AT,
+                SearchSortDirection.DESC);
+        var start = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(8);
+        try {
+            var searches = IntStream.range(0, 8)
+                    .mapToObj(index -> executor.submit(() -> {
+                        start.await();
+                        return solicitationSearchRepository.search(criteria);
+                    }))
+                    .toList();
+            start.countDown();
+            for (var search : searches) {
+                assertThat(search.get().items()).isEmpty();
+            }
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test

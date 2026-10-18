@@ -2,8 +2,6 @@
 
 An API for service requests with a multi-step workflow, geographic analyst authorization, Elasticsearch search, a transactional outbox, and an audit trail.
 
-This repository follows [`docs/implementation-plan.md`](docs/implementation-plan.md). The current phase status is tracked in the [roadmap](#roadmap).
-
 ## Challenge overview
 
 Clients create a request and complete it in three steps: basic data, address, and confirmation. Once submitted, a request becomes read-only and enters the analyst queue. Analysts can access requests only in the states covered by their assigned regions, then start a review and approve or reject the request.
@@ -216,27 +214,3 @@ Inspect available meter names at `/actuator/metrics`; query an individual meter 
 - Add distributed locking or partitioning if the outbox processor runs across multiple replicas.
 - Export Actuator metrics to a monitoring platform and add distributed tracing.
 - Define Elasticsearch index lifecycle and retention policies.
-
-## Roadmap
-
-See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full phased plan.
-
-| Phase | Scope | Status |
-| --- | --- | --- |
-| 0 | Bootstrap, architecture, and environment | Complete |
-| 1 | Pure solicitation domain and workflow | Complete |
-| 2 | PostgreSQL persistence and optimistic locking | Complete |
-| 3 | Users, roles, BCrypt authentication, and JWT authorization | Complete |
-| 4 | Authenticated solicitation creation and retrieval | Complete |
-| 5 | Basic-data step | Complete |
-| 6 | Address step and ViaCEP integration | Complete |
-| 7 | Confirmation step and BRL `Money` validation | Complete |
-| 8 | Complete solicitation submission | Complete |
-| 9 | Analyst geographic authorization | Complete |
-| 10 | Analyst review workflow | Complete |
-| 11 | Elasticsearch search projection and coverage-filtered pagination | Complete |
-| 12 | Transactional outbox and reliable search indexing | Complete |
-| 13 | AOP audit trail | Complete |
-| 14 | Consistent API error contract | Complete |
-| 15–16 | End-to-end lifecycle and security acceptance scenarios | Implemented; verification pending |
-| 17 | OpenAPI, observability, and delivery documentation | Complete |

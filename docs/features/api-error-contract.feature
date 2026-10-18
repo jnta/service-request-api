@@ -25,7 +25,7 @@ Feature: API error contract
     And the response should use code STATE_CONFLICT
 
   Scenario: Unauthenticated request
-    When a protected endpoint is requested without a valid token
+    When a protected endpoint is requested without a token or with an invalid bearer token
     Then the API should return 401
     And the response should use the common error format
 
