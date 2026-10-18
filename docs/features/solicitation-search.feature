@@ -1,5 +1,10 @@
 Feature: Solicitation search
 
+  Scenario: Searching by text and preferred date range
+    Given Elasticsearch contains solicitations with searchable titles and descriptions
+    When an analyst searches with q, dateFrom, and dateTo
+    Then matching items and the total count should be returned
+
   Scenario: Searching by status
     Given Elasticsearch contains submitted and approved solicitations
     When an analyst searches with status SUBMITTED

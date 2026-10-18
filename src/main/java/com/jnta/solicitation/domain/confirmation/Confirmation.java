@@ -26,6 +26,9 @@ public record Confirmation(
         if (estimatedValue == null) {
             throw new InvalidSolicitationDataException("Estimated value is required");
         }
+        if (!termsAccepted) {
+            throw new InvalidSolicitationDataException("Terms must be accepted");
+        }
         if (priority == Priority.HIGH && estimatedValue.isLessThan(HIGH_PRIORITY_MINIMUM_VALUE)) {
             throw new InvalidSolicitationDataException("High priority requires an estimated value of at least 100");
         }

@@ -51,7 +51,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/analyst/solicitations/**").hasAnyRole("ANALYST", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/solicitations").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.PUT, "/solicitations/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/solicitations/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/solicitations/**").hasAnyRole("CLIENT", "ADMIN")
                         .anyRequest().authenticated());
         return http.build();
     }

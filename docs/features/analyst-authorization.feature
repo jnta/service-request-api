@@ -12,6 +12,17 @@ Feature: Analyst geographic authorization
     When the analyst accesses it
     Then access should be denied
 
+  Scenario: Analyst cannot use the client solicitation endpoint
+    Given an ANALYST covers the solicitation's state
+    When the analyst reads it through GET /solicitations/{id}
+    Then access should be denied
+    And the analyst-specific endpoint remains available
+
+  Scenario: Client cannot use the analyst solicitation endpoint
+    Given a CLIENT owns a solicitation
+    When the client reads it through GET /analyst/solicitations/{id}
+    Then access should be denied
+
   Scenario: Admin accesses any state
     Given an ADMIN
     And a solicitation belongs to AM

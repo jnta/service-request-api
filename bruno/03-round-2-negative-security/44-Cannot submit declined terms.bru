@@ -1,5 +1,5 @@
 meta {
-  name: Cannot submit declined terms
+  name: Cannot submit without confirmation
   type: http
   seq: 44
 }
@@ -19,5 +19,5 @@ tests {
   const data = res.getBody();
   test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
   test("Error code", function () { expect(data.code).to.equal("SOLICITATION_INCOMPLETE"); });
-  test("Terms violation", function () { expect(data.errors.some(e => e.field === "termsAccepted")).to.equal(true); });
+  test("Missing confirmation violation", function () { expect(data.errors.some(e => e.field === "confirmation")).to.equal(true); });
 }

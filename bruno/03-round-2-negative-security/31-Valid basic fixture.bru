@@ -1,5 +1,5 @@
 meta {
-  name: Valid basic fixture
+  name: Basic data normalized limits
   type: http
   seq: 31
 }
@@ -15,11 +15,16 @@ headers {
   Authorization: Bearer {{clientToken}}
 }
 
+script:pre-request {
+  bru.setVar("maximumTitle", "T".repeat(80));
+  bru.setVar("maximumDescription", "D".repeat(1000));
+}
+
 body:json {
   {
-    "serviceType": "INSTALLATION",
-    "title": "Bruno acceptance installation",
-    "description": "Install equipment at the main office for HTTP acceptance."
+    "serviceType": "installation",
+    "title": " {{maximumTitle}} ",
+    "description": " {{maximumDescription}} "
   }
 }
 
@@ -27,4 +32,6 @@ tests {
   test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
   const data = res.getBody();
   test("Workflow state", function () { expect(data.status).to.equal("DRAFT"); expect(data.currentStep).to.equal("ADDRESS"); });
+  test("Service type is normalized", function () { expect(data.basicData.serviceType).to.equal("INSTALLATION"); });
+  test("Text limits are checked after trimming", function () { expect(data.basicData.title.length).to.equal(80); expect(data.basicData.description.length).to.equal(1000); });
 }

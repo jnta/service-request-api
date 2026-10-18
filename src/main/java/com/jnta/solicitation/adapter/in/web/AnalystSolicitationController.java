@@ -3,6 +3,7 @@ package com.jnta.solicitation.adapter.in.web;
 import com.jnta.error.adapter.in.web.ApiError;
 import com.jnta.shared.identity.UserId;
 import com.jnta.solicitation.application.DecideSolicitationUseCase;
+import com.jnta.solicitation.application.GetSolicitationUseCase;
 import com.jnta.solicitation.application.StartSolicitationReviewUseCase;
 import com.jnta.solicitation.adapter.observability.SolicitationMetrics;
 import com.jnta.solicitation.domain.SolicitationId;
@@ -20,6 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,9 +43,17 @@ public class AnalystSolicitationController {
 
     private final StartSolicitationReviewUseCase startReview;
     private final DecideSolicitationUseCase decide;
+    private final GetSolicitationUseCase getSolicitation;
     private final AnalystReviewRequestMapper requestMapper;
     private final SolicitationResponseMapper responseMapper;
     private final SolicitationMetrics metrics;
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get a solicitation for review", description = "Returns a solicitation when it is covered by the analyst's state coverage.")
+    public SolicitationResponse get(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        var solicitation = getSolicitation.getForAnalyst(new SolicitationId(id), requester(jwt));
+        return responseMapper.toResponse(solicitation);
+    }
 
     @PostMapping("/{id}/start")
     @Operation(summary = "Start solicitation review", description = "Moves a covered SUBMITTED solicitation into IN_REVIEW.")

@@ -1,0 +1,21 @@
+meta {
+  name: Covered analyst cannot use client read endpoint
+  type: http
+  seq: 56
+}
+
+get {
+  url: {{baseUrl}}/solicitations/{{approvedId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{analystToken}}
+}
+
+tests {
+  test("HTTP 403", function () { expect(res.getStatus()).to.equal(403); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.equal("ACCESS_DENIED"); expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+}

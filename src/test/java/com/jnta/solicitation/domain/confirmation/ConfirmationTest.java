@@ -23,12 +23,10 @@ class ConfirmationTest {
     }
 
     @Test
-    @DisplayName("given valid confirmation data and unaccepted terms, when created, then terms are reported for submission")
-    void shouldAllowUnacceptedTermsOnDraft() {
-        var confirmation = confirmation(Priority.LOW, 0, false, TODAY);
-
-        assertThat(confirmation.submissionViolations(TODAY))
-                .containsExactly(new Violation("termsAccepted", "Terms must be accepted"));
+    @DisplayName("given valid confirmation data and unaccepted terms, when created, then confirmation is rejected")
+    void shouldRejectUnacceptedTerms() {
+        assertThatThrownBy(() -> confirmation(Priority.LOW, 0, false, TODAY))
+                .isInstanceOf(InvalidSolicitationDataException.class);
     }
 
     @Test

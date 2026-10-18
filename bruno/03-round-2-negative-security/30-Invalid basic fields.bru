@@ -1,5 +1,5 @@
 meta {
-  name: Invalid basic fields
+  name: Unsupported service type
   type: http
   seq: 30
 }
@@ -17,9 +17,9 @@ headers {
 
 body:json {
   {
-    "serviceType": "!",
-    "title": "x",
-    "description": "short"
+    "serviceType": "CUSTOM",
+    "title": "Bruno acceptance installation",
+    "description": "Install equipment at the main office for HTTP acceptance."
   }
 }
 
@@ -28,5 +28,6 @@ tests {
   const data = res.getBody();
   test("API error envelope", function () { expect(data.code).to.be.a("string").and.not.empty; expect(data.message).to.be.a("string").and.not.empty; expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
   test("Error code", function () { expect(data.code).to.equal("VALIDATION_ERROR"); });
+  test("Unsupported service type field", function () { expect(data.errors.some(e => e.field === "serviceType")).to.equal(true); });
   
 }

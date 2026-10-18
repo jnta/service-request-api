@@ -8,6 +8,8 @@ import com.jnta.solicitation.application.policy.SolicitationAccessPolicy;
 import com.jnta.solicitation.domain.Solicitation;
 import com.jnta.solicitation.domain.SolicitationId;
 import com.jnta.user.application.port.out.UserRepository;
+import com.jnta.user.domain.User;
+import java.util.function.BiPredicate;
 
 public class GetSolicitationUseCase {
 
@@ -25,12 +27,23 @@ public class GetSolicitationUseCase {
     }
 
     public Solicitation get(SolicitationId id, UserId requester) {
+        return get(id, requester, accessPolicy::canReadAsClientOrAdmin);
+    }
+
+    public Solicitation getForAnalyst(SolicitationId id, UserId requester) {
+        return get(id, requester, accessPolicy::canReadAsAnalystOrAdmin);
+    }
+
+    private Solicitation get(
+            SolicitationId id,
+            UserId requester,
+            BiPredicate<User, Solicitation> canRead) {
         var solicitation = solicitationRepository.findById(id)
                 .orElseThrow(() -> new SolicitationNotFoundException(id))
                 .solicitation();
         var actor = userRepository.findById(requester)
                 .orElseThrow(() -> new SolicitationAccessDeniedException(id));
-        if (!accessPolicy.canRead(actor, solicitation)) {
+        if (!canRead.test(actor, solicitation)) {
             throw new SolicitationAccessDeniedException(id);
         }
         return solicitation;

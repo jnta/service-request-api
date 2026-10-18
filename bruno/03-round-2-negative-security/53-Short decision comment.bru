@@ -1,0 +1,29 @@
+meta {
+  name: Short decision comment
+  type: http
+  seq: 53
+}
+
+post {
+  url: {{baseUrl}}/analyst/solicitations/{{draftId}}/decide
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{analystToken}}
+}
+
+body:json {
+  {
+    "decision": "REJECT",
+    "comment": " 123456789 "
+  }
+}
+
+tests {
+  test("HTTP 422", function () { expect(res.getStatus()).to.equal(422); });
+  const data = res.getBody();
+  test("API error envelope", function () { expect(data.code).to.equal("INVALID_SOLICITATION_DATA"); expect(data.message).to.include("10 and 1000"); expect(data.errors).to.be.an("array"); expect(Number.isNaN(Date.parse(data.timestamp))).to.equal(false); });
+}

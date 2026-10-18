@@ -1,8 +1,10 @@
 # Execution results — 2026-10-17
 
+These results are historical and describe the collection before its contract updates. The updated collection has not been rerun; its current request count and assertions are not represented below.
+
 Executed against the running local Compose application at `http://localhost:8080`, using Bruno CLI 4.2.1 and the live OpenAPI 3.1.0 contract (12 paths). Application, PostgreSQL and Elasticsearch were healthy. ViaCEP resolved the address and unknown postal code as expected. No application code or runtime configuration was changed.
 
-## Final run
+## Final run before collection updates
 
 - 84 request files; 88 HTTP executions including bounded search retries.
 - 87 successful request executions, 1 failing request execution.

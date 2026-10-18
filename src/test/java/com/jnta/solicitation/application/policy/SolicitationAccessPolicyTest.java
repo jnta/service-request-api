@@ -29,7 +29,8 @@ class SolicitationAccessPolicyTest {
         var analyst = user(Role.ANALYST, Set.of(BrazilianState.DF, BrazilianState.GO));
         var solicitation = solicitationIn(BrazilianState.DF);
 
-        assertThat(policy.canRead(analyst, solicitation)).isTrue();
+        assertThat(policy.canReadAsAnalystOrAdmin(analyst, solicitation)).isTrue();
+        assertThat(policy.canReadAsClientOrAdmin(analyst, solicitation)).isFalse();
         assertThat(policy.canReview(analyst, solicitation)).isTrue();
         assertThat(policy.canDecide(analyst, solicitation)).isTrue();
     }
@@ -40,7 +41,8 @@ class SolicitationAccessPolicyTest {
         var analyst = user(Role.ANALYST, Set.of(BrazilianState.DF));
         var solicitation = solicitationIn(BrazilianState.SP);
 
-        assertThat(policy.canRead(analyst, solicitation)).isFalse();
+        assertThat(policy.canReadAsAnalystOrAdmin(analyst, solicitation)).isFalse();
+        assertThat(policy.canReadAsClientOrAdmin(analyst, solicitation)).isFalse();
         assertThat(policy.canReview(analyst, solicitation)).isFalse();
         assertThat(policy.canDecide(analyst, solicitation)).isFalse();
     }
@@ -51,7 +53,8 @@ class SolicitationAccessPolicyTest {
         var admin = user(Role.ADMIN, Set.of());
         var solicitation = solicitationIn(BrazilianState.AM);
 
-        assertThat(policy.canRead(admin, solicitation)).isTrue();
+        assertThat(policy.canReadAsClientOrAdmin(admin, solicitation)).isTrue();
+        assertThat(policy.canReadAsAnalystOrAdmin(admin, solicitation)).isTrue();
         assertThat(policy.canEdit(admin, solicitation)).isTrue();
         assertThat(policy.canReview(admin, solicitation)).isTrue();
         assertThat(policy.canDecide(admin, solicitation)).isTrue();
@@ -64,9 +67,10 @@ class SolicitationAccessPolicyTest {
         var owned = solicitationOwnedBy(client.id());
         var other = solicitationIn(BrazilianState.DF);
 
-        assertThat(policy.canRead(client, owned)).isTrue();
+        assertThat(policy.canReadAsClientOrAdmin(client, owned)).isTrue();
+        assertThat(policy.canReadAsAnalystOrAdmin(client, owned)).isFalse();
         assertThat(policy.canEdit(client, owned)).isTrue();
-        assertThat(policy.canRead(client, other)).isFalse();
+        assertThat(policy.canReadAsClientOrAdmin(client, other)).isFalse();
         assertThat(policy.canEdit(client, other)).isFalse();
         assertThat(policy.canReview(client, owned)).isFalse();
         assertThat(policy.canDecide(client, owned)).isFalse();
@@ -89,7 +93,7 @@ class SolicitationAccessPolicyTest {
     private static Solicitation solicitationIn(BrazilianState state) {
         var solicitation = Solicitation.create(SolicitationId.generate(), UserId.generate());
         solicitation.updateBasicData(new BasicData(
-                new ServiceType("INSTALLATION"), "Equipment installation", "Install equipment at the main office."));
+                ServiceType.INSTALLATION, "Equipment installation", "Install equipment at the main office."));
         solicitation.updateAddress(new Address(new Cep("70040902"), "Street", "Neighborhood", "City", state,
                 "123", null));
         return solicitation;

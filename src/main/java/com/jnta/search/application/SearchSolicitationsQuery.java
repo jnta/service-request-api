@@ -6,6 +6,7 @@ import com.jnta.solicitation.domain.workflow.SolicitationStatus;
 import java.time.LocalDate;
 
 public record SearchSolicitationsQuery(
+        String q,
         SolicitationStatus status,
         String serviceType,
         Priority priority,
@@ -22,7 +23,7 @@ public record SearchSolicitationsQuery(
             throw new InvalidSearchQueryException("Page must be non-negative and size must be between 1 and 100");
         }
         if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
-            throw new InvalidSearchQueryException("fromDate must not be after toDate");
+            throw new InvalidSearchQueryException("dateFrom must not be after dateTo");
         }
         if (sortField == null || sortDirection == null) {
             throw new InvalidSearchQueryException("Sort field and direction are required");
@@ -30,5 +31,6 @@ public record SearchSolicitationsQuery(
         serviceType = serviceType == null || serviceType.isBlank()
                 ? null
                 : serviceType.trim().toUpperCase(java.util.Locale.ROOT);
+        q = q == null || q.isBlank() ? null : q.trim();
     }
 }

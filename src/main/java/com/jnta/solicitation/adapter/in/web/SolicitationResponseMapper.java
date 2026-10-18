@@ -27,7 +27,7 @@ public class SolicitationResponseMapper {
             return null;
         }
         return new SolicitationResponse.BasicData(
-                basicData.serviceType().value(), basicData.title(), basicData.description());
+                basicData.serviceType().name(), basicData.title(), basicData.description());
     }
 
     private SolicitationResponse.Address map(Address address) {

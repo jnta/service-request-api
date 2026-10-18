@@ -28,6 +28,9 @@ public class SolicitationSearchDocument {
     @Field(type = FieldType.Text)
     private String title;
 
+    @Field(type = FieldType.Text)
+    private String description;
+
     @Field(type = FieldType.Keyword)
     private String status;
 

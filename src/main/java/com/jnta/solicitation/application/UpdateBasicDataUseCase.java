@@ -40,7 +40,7 @@ public class UpdateBasicDataUseCase {
         }
 
         var basicData = new BasicData(
-                new ServiceType(command.serviceType()), command.title(), command.description());
+                ServiceType.from(command.serviceType()), command.title(), command.description());
         stored.solicitation().updateBasicData(basicData);
         return solicitationRepository.save(stored.withSolicitation(stored.solicitation())).solicitation();
     }

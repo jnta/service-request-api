@@ -3,12 +3,24 @@ package com.jnta.solicitation.domain.basicdata;
 import com.jnta.solicitation.domain.exception.InvalidSolicitationDataException;
 import java.util.Locale;
 
-public record ServiceType(String value) {
+public enum ServiceType {
+    INSTALLATION,
+    MAINTENANCE,
+    INSPECTION;
 
-    public ServiceType {
-        if (value == null || !value.trim().matches("[A-Za-z][A-Za-z0-9_]{0,39}")) {
-            throw new InvalidSolicitationDataException("Service type must be a valid code");
+    public static ServiceType from(String value) {
+        if (value == null) {
+            throw invalidServiceType();
         }
-        value = value.trim().toUpperCase(Locale.ROOT);
+        try {
+            return valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw invalidServiceType();
+        }
+    }
+
+    private static InvalidSolicitationDataException invalidServiceType() {
+        return new InvalidSolicitationDataException(
+                "Service type must be INSTALLATION, MAINTENANCE, or INSPECTION");
     }
 }

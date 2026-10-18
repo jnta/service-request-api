@@ -49,6 +49,8 @@ public class SearchSolicitationsController {
     @Operation(summary = "Search solicitations", description = "Filters the search projection. Analyst state coverage is always enforced in addition to the requested state filter.")
     public SolicitationSearchPage search(
             @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Search text in title and description")
+                    @RequestParam(required = false) String q,
             @Parameter(description = "Filter by workflow status")
                     @RequestParam(required = false) SolicitationStatus status,
             @Parameter(description = "Filter by service type")
@@ -58,9 +60,9 @@ public class SearchSolicitationsController {
             @Parameter(description = "Filter by state; intersected with analyst coverage")
                     @RequestParam(required = false) BrazilianState state,
             @Parameter(description = "Include solicitations preferred on or after this date", example = "2026-01-01")
-                    @RequestParam(required = false) LocalDate fromDate,
+                    @RequestParam(required = false) LocalDate dateFrom,
             @Parameter(description = "Include solicitations preferred on or before this date", example = "2026-12-31")
-                    @RequestParam(required = false) LocalDate toDate,
+                    @RequestParam(required = false) LocalDate dateTo,
             @Parameter(description = "Zero-based page index", example = "0")
                     @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of results per page, from 1 through 100", example = "20")
@@ -69,12 +71,13 @@ public class SearchSolicitationsController {
                     @RequestParam(defaultValue = "createdAt,desc") String sort) {
         var sortOptions = parseSort(sort);
         var query = new SearchSolicitationsQuery(
+                q,
                 status,
                 serviceType,
                 priority,
                 state,
-                fromDate,
-                toDate,
+                dateFrom,
+                dateTo,
                 page,
                 size,
                 sortOptions.field(),

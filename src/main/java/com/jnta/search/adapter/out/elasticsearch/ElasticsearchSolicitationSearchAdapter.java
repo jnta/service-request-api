@@ -87,6 +87,11 @@ public class ElasticsearchSolicitationSearchAdapter
 
     private Criteria toCriteria(SolicitationSearchCriteria filters) {
         var criteria = new Criteria("id").exists();
+        if (filters.q() != null) {
+            var textCriteria = new Criteria("title").matches(filters.q())
+                    .or(new Criteria("description").matches(filters.q()));
+            criteria = criteria.and(textCriteria);
+        }
         if (filters.status() != null) {
             criteria = criteria.and("status").is(filters.status().name());
         }
@@ -124,8 +129,9 @@ public class ElasticsearchSolicitationSearchAdapter
 
     private static void setBasicData(SolicitationSearchDocument document, BasicData basicData) {
         if (basicData != null) {
-            document.setServiceType(basicData.serviceType().value());
+            document.setServiceType(basicData.serviceType().name());
             document.setTitle(basicData.title());
+            document.setDescription(basicData.description());
         }
     }
 

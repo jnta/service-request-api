@@ -151,10 +151,24 @@ class SolicitationLifecycleAcceptanceTest {
         mockMvc.perform(get("/analyst/solicitations/search")
                         .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken()))
                         .param("status", "SUBMITTED")
-                        .param("state", "DF"))
+                        .param("state", "DF")
+                        .param("q", "Equipment")
+                        .param("dateFrom", LocalDate.now(clock).plusDays(10).toString())
+                        .param("dateTo", LocalDate.now(clock).plusDays(10).toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.items[0].id").value(solicitationId));
+
+        mockMvc.perform(get("/analyst/solicitations/search")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken()))
+                        .param("q", "office"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1));
+
+        mockMvc.perform(get("/analyst/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(solicitationId));
 
         mockMvc.perform(post("/analyst/solicitations/{id}/start", solicitationId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken())))
@@ -164,6 +178,12 @@ class SolicitationLifecycleAcceptanceTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken()))
                         .contentType(APPLICATION_JSON)
                         .content(decisionRequest("APPROVE", "Validated")))
+                .andExpect(status().isUnprocessableEntity());
+
+        mockMvc.perform(post("/analyst/solicitations/{id}/decide", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken()))
+                        .contentType(APPLICATION_JSON)
+                        .content(decisionRequest("APPROVE", "Validated successfully")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"));
 
@@ -220,6 +240,32 @@ class SolicitationLifecycleAcceptanceTest {
         mockMvc.perform(get("/solicitations/{id}", submitted.solicitationId())
                         .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken())))
                 .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/analyst/solicitations/{id}", submitted.solicitationId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("given an analyst covers a solicitation, when reading it through the client endpoint, then access is denied")
+    void shouldDenyCoveredAnalystReadingThroughClientEndpoint() throws Exception {
+        var submitted = createSubmittedSolicitation("70040902", "DF");
+        var analyst = createAnalystAndLogin(Set.of("DF"));
+
+        mockMvc.perform(get("/solicitations/{id}", submitted.solicitationId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("given a client owns a solicitation, when using the analyst read endpoint, then access is denied")
+    void shouldDenyClientReadingThroughAnalystEndpoint() throws Exception {
+        var client = registerAndLogin();
+        var solicitationId = createSolicitation(client);
+
+        mockMvc.perform(get("/analyst/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -233,13 +279,14 @@ class SolicitationLifecycleAcceptanceTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(analyst.accessToken()))
                         .param("state", "SP"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(0));
+                .andExpect(jsonPath("$.total").value(0));
     }
 
     @Test
     @DisplayName("given the search index does not exist, when searches run concurrently, then all searches complete")
     void shouldCreateSearchIndexWhenSearchesRunConcurrently() throws Exception {
         var criteria = new SolicitationSearchCriteria(
+                null,
                 SolicitationStatus.SUBMITTED,
                 "INSTALLATION",
                 null,
@@ -278,6 +325,59 @@ class SolicitationLifecycleAcceptanceTest {
                         .contentType(APPLICATION_JSON)
                         .content(basicDataRequest()))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("given an unsupported service type, when basic data is updated, then the request is rejected")
+    void shouldRejectUnsupportedServiceTypeAtHttpBoundary() throws Exception {
+        var client = registerAndLogin();
+        var solicitationId = createSolicitation(client);
+
+        mockMvc.perform(put("/solicitations/{id}/steps/basic-data", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"serviceType":"CUSTOM","title":"Equipment installation","description":"Install equipment at the main office."}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("given title and description with valid lengths after trimming, when basic data is updated, then the step is saved")
+    void shouldValidateBasicDataLengthAfterTrimmingAtHttpBoundary() throws Exception {
+        var client = registerAndLogin();
+        var solicitationId = createSolicitation(client);
+        var title = "T".repeat(80);
+        var description = "D".repeat(1000);
+
+        mockMvc.perform(put("/solicitations/{id}/steps/basic-data", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"serviceType":"INSTALLATION","title":" %s ","description":" %s "}
+                                """.formatted(title, description)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("given terms are not accepted, when confirmation is updated, then the step is not completed")
+    void shouldRejectDeclinedTermsWhenSavingConfirmation() throws Exception {
+        var client = registerAndLogin();
+        var solicitationId = createSolicitation(client);
+        completeBasicData(solicitationId, client.accessToken());
+        completeAddress(solicitationId, client.accessToken(), "70040902", "DF");
+
+        mockMvc.perform(put("/solicitations/{id}/steps/confirmation", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"priority":"LOW","preferredDate":"%s","estimatedValue":{"amount":"350.00","currency":"BRL"},"termsAccepted":false}
+                                """.formatted(LocalDate.now(clock).plusDays(10))))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentStep").value("CONFIRMATION"));
     }
 
     @Test

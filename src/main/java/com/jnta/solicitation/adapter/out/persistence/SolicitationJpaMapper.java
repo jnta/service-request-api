@@ -27,7 +27,7 @@ final class SolicitationJpaMapper {
 
         var basicData = solicitation.basicData();
         if (basicData != null) {
-            entity.serviceType = basicData.serviceType().value();
+            entity.serviceType = basicData.serviceType().name();
             entity.title = basicData.title();
             entity.description = basicData.description();
         }
@@ -63,7 +63,7 @@ final class SolicitationJpaMapper {
     VersionedSolicitation toVersionedSolicitation(SolicitationJpaEntity entity) {
         var basicData = entity.serviceType == null
                 ? null
-                : new BasicData(new ServiceType(entity.serviceType), entity.title, entity.description);
+                : new BasicData(ServiceType.valueOf(entity.serviceType), entity.title, entity.description);
         var address = entity.cep == null
                 ? null
                 : new Address(new Cep(entity.cep), entity.street, entity.neighborhood, entity.city, entity.state,

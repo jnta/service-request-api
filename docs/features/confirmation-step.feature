@@ -19,5 +19,4 @@ Feature: Solicitation confirmation step
   Scenario: Terms are not accepted
     Given all other confirmation fields are valid
     When termsAccepted is false
-    Then confirmation may be saved on the draft
-    But submission must not be allowed
+    Then the confirmation step should be rejected

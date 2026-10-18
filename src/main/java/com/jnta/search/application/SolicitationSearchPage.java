@@ -4,14 +4,14 @@ import java.util.List;
 
 public record SolicitationSearchPage(
         List<SolicitationSearchResult> items,
-        long totalElements,
+        long total,
         int page,
         int size,
         int totalPages) {
 
-    public SolicitationSearchPage(List<SolicitationSearchResult> items, long totalElements, int page, int size) {
-        this(items, totalElements, page, size,
-                totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / size));
+    public SolicitationSearchPage(List<SolicitationSearchResult> items, long total, int page, int size) {
+        this(items, total, page, size,
+                total == 0 ? 0 : (int) Math.ceil((double) total / size));
     }
 
     public SolicitationSearchPage {

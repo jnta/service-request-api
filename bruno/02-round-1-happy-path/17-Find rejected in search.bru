@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/analyst/solicitations/search?state={{expectedState}}&status=SUBMITTED&serviceType=INSTALLATION&size=100
+  url: {{baseUrl}}/analyst/solicitations/search?q=office&state={{expectedState}}&status=SUBMITTED&serviceType=INSTALLATION&dateFrom={{futureDate}}&dateTo={{futureDate}}&size=100
   body: none
   auth: none
 }
@@ -26,6 +26,7 @@ tests {
     bru.runner.setNextRequest("Find rejected in search");
   } else {
     test("Own fixture appears in eventual search", function () { expect(found).to.equal(true); });
+    if (found) test("Search returns total count", function () { expect(data.total).to.be.at.least(1); });
   }
   
 }

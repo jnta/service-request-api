@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.Set;
 
 public record SolicitationSearchCriteria(
+        String q,
         SolicitationStatus status,
         String serviceType,
         Priority priority,

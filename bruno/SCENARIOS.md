@@ -22,6 +22,7 @@
 | 02-round-1-happy-path | Start approved review | 200 |
 | 02-round-1-happy-path | Decide approved | 200 |
 | 02-round-1-happy-path | Read approved terminal state | 200 |
+| 02-round-1-happy-path | Read approved as covered analyst | 200 |
 | 02-round-1-happy-path | Create rejected draft | 201 |
 | 02-round-1-happy-path | Read rejected draft | 200 |
 | 02-round-1-happy-path | Save rejected basic data | 200 |
@@ -61,8 +62,8 @@
 | 03-round-2-negative-security | Cannot skip address step | 409 |
 | 03-round-2-negative-security | Cannot submit incomplete draft | 422 |
 | 03-round-2-negative-security | Incomplete draft unchanged | 200 |
-| 03-round-2-negative-security | Invalid basic fields | 400 |
-| 03-round-2-negative-security | Valid basic fixture | 200 |
+| 03-round-2-negative-security | Unsupported service type | 400 |
+| 03-round-2-negative-security | Basic data normalized limits | 200 |
 | 03-round-2-negative-security | Malformed CEP | 400 |
 | 03-round-2-negative-security | Unknown CEP | 422 |
 | 03-round-2-negative-security | Invalid address unchanged | 200 |
@@ -74,9 +75,9 @@
 | 03-round-2-negative-security | Unsupported currency | 400 |
 | 03-round-2-negative-security | Missing confirmation fields | 400 |
 | 03-round-2-negative-security | Invalid confirmation unchanged | 200 |
-| 03-round-2-negative-security | Save declined terms | 200 |
-| 03-round-2-negative-security | Cannot submit declined terms | 422 |
-| 03-round-2-negative-security | Declined terms draft unchanged | 200 |
+| 03-round-2-negative-security | Reject declined terms at save | 400 |
+| 03-round-2-negative-security | Cannot submit without confirmation | 422 |
+| 03-round-2-negative-security | Declined confirmation not saved | 200 |
 | 03-round-2-negative-security | High priority boundary accepted | 200 |
 | 03-round-2-negative-security | Cannot decide draft | 409 |
 | 03-round-2-negative-security | Cannot review draft | 409 |
@@ -84,5 +85,8 @@
 | 03-round-2-negative-security | Cannot decide before review | 409 |
 | 03-round-2-negative-security | Start validation review | 200 |
 | 03-round-2-negative-security | Blank decision comment | 400 |
+| 03-round-2-negative-security | Short decision comment | 422 |
 | 03-round-2-negative-security | Invalid decision unchanged | 200 |
 | 03-round-2-negative-security | Finish validation fixture | 200 |
+| 03-round-2-negative-security | Covered analyst cannot use client read endpoint | 403 |
+| 03-round-2-negative-security | Client cannot use analyst read endpoint | 403 |

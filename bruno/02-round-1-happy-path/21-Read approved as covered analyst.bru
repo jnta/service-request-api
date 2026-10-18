@@ -1,0 +1,21 @@
+meta {
+  name: Read approved as covered analyst
+  type: http
+  seq: 21
+}
+
+get {
+  url: {{baseUrl}}/analyst/solicitations/{{approvedId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{analystToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  const data = res.getBody();
+  test("Covered solicitation is returned", function () { expect(data.id).to.equal(bru.getVar("approvedId")); expect(data.status).to.equal("APPROVED"); });
+}

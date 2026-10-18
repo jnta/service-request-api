@@ -1,5 +1,15 @@
 Feature: Analyst review workflow
 
+  Scenario: Analyst reads a solicitation in a covered state
+    Given a solicitation belongs to a state covered by the analyst
+    When the analyst requests GET /analyst/solicitations/{id}
+    Then the solicitation should be returned
+
+  Scenario: Analyst cannot read a solicitation outside coverage
+    Given a solicitation belongs to a state not covered by the analyst
+    When the analyst requests GET /analyst/solicitations/{id}
+    Then access should be denied
+
   Scenario: Analyst starts review
     Given a SUBMITTED solicitation in an analyst's coverage
     When the analyst starts the review
@@ -10,6 +20,11 @@ Feature: Analyst review workflow
     And the analyst covers its state
     When the analyst approves it with a comment
     Then status should become APPROVED
+
+  Scenario: Decision comment has the required length
+    Given a solicitation in review
+    When the analyst decides with a comment shorter than 10 characters
+    Then the decision should be rejected
 
   Scenario: Analyst rejects a solicitation
     Given an IN_REVIEW solicitation

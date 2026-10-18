@@ -8,9 +8,17 @@ import com.jnta.user.domain.User;
 
 public class SolicitationAccessPolicy {
 
-    public boolean canRead(User actor, Solicitation solicitation) {
+    public boolean canReadAsClientOrAdmin(User actor, Solicitation solicitation) {
         return switch (actor.role()) {
             case CLIENT -> owns(actor.id(), solicitation);
+            case ANALYST -> false;
+            case ADMIN -> true;
+        };
+    }
+
+    public boolean canReadAsAnalystOrAdmin(User actor, Solicitation solicitation) {
+        return switch (actor.role()) {
+            case CLIENT -> false;
             case ANALYST -> covers(actor, solicitation);
             case ADMIN -> true;
         };

@@ -153,23 +153,6 @@ class SolicitationTest {
         }
 
         @Test
-        @DisplayName("given a draft without accepted terms, when submitted, then submission is rejected")
-        void shouldRejectSubmissionWhenTermsAreNotAccepted() {
-            var solicitation = solicitationWithAddress();
-            solicitation.updateConfirmation(confirmation(Priority.LOW, 0, false, TODAY), CLOCK);
-
-            assertThat(solicitation.hasCompletedSteps()).isTrue();
-            assertThat(solicitation.isReadyForSubmission(CLOCK)).isFalse();
-
-            assertThatThrownBy(() -> solicitation.submit(CLOCK))
-                    .isInstanceOf(IncompleteSolicitationException.class)
-                    .satisfies(exception -> assertThat(((IncompleteSolicitationException) exception).violations())
-                            .contains(new Violation("termsAccepted", "Terms must be accepted")));
-
-            assertThat(solicitation.status()).isEqualTo(SolicitationStatus.DRAFT);
-        }
-
-        @Test
         @DisplayName("given a preferred date that has passed, when submitted, then submission is rejected")
         void shouldRevalidatePreferredDateAtSubmission() {
             var solicitation = solicitationWithAddress();
@@ -215,10 +198,11 @@ class SolicitationTest {
         void shouldApproveSolicitation() {
             var solicitation = solicitationInReview();
 
-            solicitation.approve("Validated");
+            solicitation.approve("Validated successfully");
 
             assertThat(solicitation.status()).isEqualTo(SolicitationStatus.APPROVED);
-            assertThat(solicitation.decision()).isEqualTo(new Decision(Decision.Outcome.APPROVE, "Validated"));
+            assertThat(solicitation.decision())
+                    .isEqualTo(new Decision(Decision.Outcome.APPROVE, "Validated successfully"));
         }
 
         @Test
@@ -238,7 +222,7 @@ class SolicitationTest {
         void shouldPreventApprovalOfDraft() {
             var solicitation = newSolicitation();
 
-            assertThatThrownBy(() -> solicitation.approve("Validated"))
+            assertThatThrownBy(() -> solicitation.approve("Validated successfully"))
                     .isInstanceOf(InvalidSolicitationStateException.class);
 
             assertThat(solicitation.status()).isEqualTo(SolicitationStatus.DRAFT);
@@ -294,7 +278,7 @@ class SolicitationTest {
     }
 
     private static ServiceType serviceType() {
-        return new ServiceType("INSTALLATION");
+        return ServiceType.INSTALLATION;
     }
 
     private static Address address() {

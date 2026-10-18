@@ -11,6 +11,11 @@ Feature: Solicitation domain
     When valid basic data is provided
     Then the current step should become ADDRESS
 
+  Scenario: Validating basic-data lengths after trimming
+    Given a title and description within their limits after trimming
+    When basic data is provided with surrounding spaces
+    Then the basic data should be accepted
+
   Scenario: Rejecting invalid basic data
     Given a solicitation in DRAFT at BASIC_DATA
     When a title shorter than 3 characters is provided
@@ -42,11 +47,15 @@ Feature: Solicitation domain
     When estimated value is lower than 100
     Then confirmation should be rejected
 
-  Scenario: Saving confirmation without accepting terms
+  Scenario: Rejecting confirmation without accepting terms
     Given all other confirmation fields are valid
     When terms are not accepted
-    Then confirmation may be saved on the draft
-    But submission should be rejected
+    Then confirmation should be rejected
+
+  Scenario: Rejecting an unsupported service type
+    Given a service type outside INSTALLATION, MAINTENANCE, and INSPECTION
+    When basic data is created
+    Then the service type should be rejected
 
   Scenario: Submitting a complete solicitation
     Given all solicitation steps are complete

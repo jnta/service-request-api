@@ -31,6 +31,7 @@ public class SearchSolicitationsUseCase {
         }
 
         return searchRepository.search(new SolicitationSearchCriteria(
+                query.q(),
                 query.status(),
                 query.serviceType(),
                 query.priority(),
