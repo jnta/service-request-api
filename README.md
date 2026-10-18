@@ -136,7 +136,7 @@ cd bruno
 npx --yes @usebruno/cli@4.2.1 run --env Local --sandbox developer
 ```
 
-The collection creates unique clients, analysts, and solicitations and retains them between runs. Reports can contain credentials and tokens; they are ignored by Git and should not be shared. HTTP checks complement the Java/Testcontainers suite; they do not inspect internal audit/outbox persistence or simulate infrastructure outages. See the [scenario matrix](bruno/SCENARIOS.md) and [execution results](bruno/RESULTS.md).
+The collection creates unique clients, analysts, and solicitations and retains them between runs. Reports can contain credentials and tokens; they are ignored by Git and should not be shared. HTTP checks complement the Java/Testcontainers suite; they do not inspect internal audit/outbox persistence or simulate infrastructure outages. See the [collection guide](bruno/README.md) for execution and coverage boundaries.
 
 ## What the application does
 
@@ -205,7 +205,9 @@ Clients create a draft and complete basic data, address, and confirmation in ord
 - `PUT /solicitations/{id}/steps/basic-data` updates service type, title, and description for the owner of a draft.
 - `PUT /solicitations/{id}/steps/address` accepts CEP, number, and complement; street, neighborhood, city, and state are resolved by ViaCEP.
 - `PUT /solicitations/{id}/steps/confirmation` saves priority, preferred date, value and currency, and terms acceptance.
-- `POST /solicitations/{id}/submit` submits a complete solicitation with accepted terms.
+- `POST /solicitations/{id}/submit` lets the owning `CLIENT` or an `ADMIN` submit a complete DRAFT with accepted terms. An administrative submission preserves the original client as owner and audits the ADMIN as the actor.
+
+ViaCEP connection and response timeouts default to `2s` and `3s`; configure them with `VIACEP_CONNECT_TIMEOUT` and `VIACEP_READ_TIMEOUT`. A timeout returns `503` and does not complete the address step.
 
 ## Authentication and authorization
 

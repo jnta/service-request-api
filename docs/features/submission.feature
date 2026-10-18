@@ -7,6 +7,13 @@ Feature: Solicitation submission
     Then its status should become SUBMITTED
     And it should no longer be editable
 
+  Scenario: Admin submitting another client's complete draft
+    Given an admin and another client's complete DRAFT solicitation
+    When the admin submits it
+    Then its status should become SUBMITTED
+    And the original client should remain its owner
+    And the admin should be identified as the submission actor
+
   Scenario: Rejecting incomplete submission
     Given a solicitation does not have a completed address
     When the owner submits it

@@ -207,6 +207,40 @@ class SolicitationLifecycleAcceptanceTest {
     }
 
     @Test
+    @DisplayName("given an admin and another client's complete draft, when the admin submits it, then ownership is preserved and the admin is audited")
+    void shouldAllowAdminToSubmitAnotherClientsDraftAndAuditTheAdmin() throws Exception {
+        var client = registerAndLogin();
+        var solicitationId = createSolicitation(client);
+        completeBasicData(solicitationId, client.accessToken());
+        completeAddress(solicitationId, client.accessToken(), "70040902", "DF");
+        completeConfirmation(solicitationId, client.accessToken());
+        var admin = new TestIdentity(
+                jdbcTemplate.queryForObject("select id from users where email = ?", UUID.class, ADMIN_EMAIL).toString(),
+                ADMIN_EMAIL,
+                login(ADMIN_EMAIL, ADMIN_PASSWORD));
+
+        mockMvc.perform(post("/solicitations/{id}/submit", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(admin.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUBMITTED"))
+                .andExpect(jsonPath("$.ownerId").value(client.userId()));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "select client_id from solicitations where id = ?", UUID.class, UUID.fromString(solicitationId)))
+                .isEqualTo(UUID.fromString(client.userId()));
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from audit_logs where actor_id = ? and aggregate_type = ? "
+                        + "and aggregate_id = ? and action = ? and success",
+                Integer.class,
+                UUID.fromString(admin.userId()),
+                "Solicitation",
+                UUID.fromString(solicitationId),
+                "SOLICITATION_SUBMITTED"))
+                .isEqualTo(1);
+        assertThat(admin.userId()).isNotEqualTo(client.userId());
+    }
+
+    @Test
     @DisplayName("given client A owns a solicitation, when client B reads it, then access is denied")
     void shouldDenyClientReadingAnotherClientsSolicitation() throws Exception {
         var owner = registerAndLogin();
@@ -398,6 +432,38 @@ class SolicitationLifecycleAcceptanceTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DRAFT"))
                 .andExpect(jsonPath("$.currentStep").value("ADDRESS"));
+    }
+
+    @Test
+    @DisplayName("given ViaCEP does not respond within the read timeout, when the owner updates the address, then the step remains unchanged")
+    void shouldNotAdvanceAddressStepWhenViaCepTimesOut() throws Exception {
+        var client = registerAndLogin();
+        var solicitationId = createSolicitation(client);
+        completeBasicData(solicitationId, client.accessToken());
+        VIA_CEP.stubFor(WireMock.get(WireMock.urlEqualTo("/70040902/json/"))
+                .willReturn(WireMock.aResponse()
+                        .withFixedDelay(4000)
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"cep":"70040902","logradouro":"Main Street","bairro":"Central","localidade":"Brasilia","uf":"DF"}
+                                """)));
+
+        mockMvc.perform(put("/solicitations/{id}/steps/address", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken()))
+                        .contentType(APPLICATION_JSON)
+                        .content(addressRequest("70040902")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("POSTAL_CODE_SERVICE_UNAVAILABLE"));
+
+        var readback = mockMvc.perform(get("/solicitations/{id}", solicitationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(client.accessToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DRAFT"))
+                .andExpect(jsonPath("$.currentStep").value("ADDRESS"))
+                .andReturn();
+        Object address = JsonPath.read(readback.getResponse().getContentAsString(), "$.address");
+        assertThat(address).isNull();
     }
 
     @Test

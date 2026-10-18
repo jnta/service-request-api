@@ -28,7 +28,7 @@ Each full run generates unique email addresses and dates relative to the current
 
 `cep` and `expectedState` must identify a real ViaCEP address; defaults use 01001000/SP. `outsideState` must differ. Search checks use fixture IDs, `q`, `dateFrom`, and `dateTo`, assert the `total` response field, and never assume an empty database. They poll at most 20 retries with one second between retries. A polling timeout is a failure rather than a skipped assertion. The fixture must appear in a covered analyst's search before the uncovered analyst search assertion; this prevents a misleading pass caused by a missing projection. Large shared databases with over 100 matching records can place a fixture outside the queried page; use an isolated acceptance database.
 
-Every request asserts HTTP status. Negative requests also enforce `{code, message, errors, timestamp}`; application error codes are asserted where defined in source. Readbacks verify that invalid steps, incomplete submissions, declined terms and invalid decisions preserve state. See [SCENARIOS.md](SCENARIOS.md) for individual expectations.
+Every request asserts HTTP status. Negative requests also enforce `{code, message, errors, timestamp}`; application error codes are asserted where defined in source. Readbacks verify that invalid steps, incomplete submissions, declined terms and invalid decisions preserve state. Request names and their expectations are maintained alongside the collection files.
 
 - Setup: public health, client registration and login, admin login, managed analysts with distinct state coverage.
 - Round 1: draft ownership, three ordered steps, ViaCEP resolution, submission, eventual search, covered review, approval and rejection, terminal reads.

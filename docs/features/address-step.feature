@@ -21,6 +21,14 @@ Feature: Solicitation address step
     Then the API should return an integration error
     And the solicitation should remain unchanged
 
+  Scenario: ViaCEP exceeds the configured read timeout
+    Given a solicitation whose current step is ADDRESS
+    And ViaCEP does not respond within the configured read timeout
+    When the client attempts to complete the address
+    Then the API should return an integration error
+    And no partial address should be persisted
+    And currentStep should remain ADDRESS
+
   Scenario: Rejecting address step before basic data
     Given a solicitation whose current step is BASIC_DATA
     When the client attempts to submit address data

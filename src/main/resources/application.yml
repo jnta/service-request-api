@@ -44,6 +44,8 @@ security:
 integration:
   viacep:
     base-url: ${VIACEP_BASE_URL:https://viacep.com.br/ws}
+    connect-timeout: ${VIACEP_CONNECT_TIMEOUT:2s}
+    read-timeout: ${VIACEP_READ_TIMEOUT:3s}
 
 outbox:
   processor:

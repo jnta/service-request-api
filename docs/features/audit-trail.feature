@@ -9,6 +9,13 @@ Feature: Audit trail
     And it should identify the solicitation and timestamp
     And success should be true
 
+  Scenario: Auditing an admin submission
+    Given an admin submits another client's complete DRAFT solicitation
+    Then the audit record should identify the admin as the actor
+    And it should identify the solicitation's original client as its owner
+    And action should be SOLICITATION_SUBMITTED
+    And success should be true
+
   Scenario: Auditing a failed submission
     Given a client owns an incomplete solicitation
     When the client submits the solicitation
